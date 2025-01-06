@@ -7,6 +7,20 @@ on:
     paths-ignore:
       - "version.json"
       - "**.md"
+      - ".gitignore"
+      - ".github/**"
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: "Version bump type"
+        required: true
+        default: "auto"
+        type: choice
+        options:
+          - auto
+          - major
+          - minor
+          - patch
 
 defaults:
   run:
@@ -17,6 +31,7 @@ jobs:
     runs-on: macos-latest
     permissions:
       contents: write
+    if: "!contains(github.event.head_commit.message, 'chore: bump version')"
 
     steps:
       - name: Checkout code
@@ -52,8 +67,8 @@ jobs:
 
       - name: Determine version bump
         id: version-bump
+        if: github.event.inputs.version_type == '' || github.event.inputs.version_type == 'auto'
         run: |
-          source venv/bin/activate
           # Get commit messages since last tag
           COMMITS=$(git log $(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD --pretty=format:"%s")
           echo "Commit messages:"
@@ -68,16 +83,71 @@ jobs:
             echo "type=patch" >> $GITHUB_OUTPUT
           fi
 
+      - name: Set manual version type
+        id: manual-version
+        if: github.event.inputs.version_type != '' && github.event.inputs.version_type != 'auto'
+        run: |
+          echo "type=${{ github.event.inputs.version_type }}" >> $GITHUB_OUTPUT
+
       - name: Update version
         id: version
         run: |
           source venv/bin/activate
+          # Use manual version type if provided, otherwise use determined type
+          VERSION_TYPE="${{ github.event.inputs.version_type != '' && github.event.inputs.version_type != 'auto' && github.event.inputs.version_type || steps.version-bump.outputs.type }}"
+          echo "Using version type: $VERSION_TYPE"
+
           # Run version manager with determined bump type
-          python version_manager.py ${{ steps.version-bump.outputs.type }} --no-tag
+          python version_manager.py $VERSION_TYPE --no-tag
 
           # Get the new version
           VERSION=$(python -c "import json; print(json.load(open('version.json'))['major'], json.load(open('version.json'))['minor'], json.load(open('version.json'))['patch'], sep='.')")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Generate release notes
+        id: release-notes
+        run: |
+          # Get the previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 "HEAD^" 2>/dev/null || echo "")
+
+          # Start collecting release notes
+          echo "NOTES<<EOF" >> $GITHUB_OUTPUT
+
+          echo "## What's Changed" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+
+          if [ -n "$PREV_TAG" ]; then
+            # Group changes by type
+            echo "### 🚀 Features" >> $GITHUB_OUTPUT
+            git log $PREV_TAG..HEAD --pretty=format:"* %s" --grep="^feat" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            
+            echo "### 🐛 Bug Fixes" >> $GITHUB_OUTPUT
+            git log $PREV_TAG..HEAD --pretty=format:"* %s" --grep="^fix" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            
+            echo "### 📝 Documentation" >> $GITHUB_OUTPUT
+            git log $PREV_TAG..HEAD --pretty=format:"* %s" --grep="^docs" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            
+            echo "### ♻️ Refactoring" >> $GITHUB_OUTPUT
+            git log $PREV_TAG..HEAD --pretty=format:"* %s" --grep="^refactor" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            
+            echo "### 🔧 Other Changes" >> $GITHUB_OUTPUT
+            git log $PREV_TAG..HEAD --pretty=format:"* %s" --grep="^style\|^test\|^chore" >> $GITHUB_OUTPUT
+          else
+            echo "Initial release" >> $GITHUB_OUTPUT
+          fi
+
+          echo "" >> $GITHUB_OUTPUT
+          echo "**Full Changelog**: https://github.com/${{ github.repository }}/commits/${{ github.sha }}" >> $GITHUB_OUTPUT
+
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Build and package
         run: |
@@ -110,19 +180,6 @@ jobs:
           git tag -a "v${{ steps.version.outputs.version }}" -m "Release v${{ steps.version.outputs.version }}"
           git push --tags
 
-      - name: Generate changelog
-        id: changelog
-        run: |
-          PREV_TAG=$(git describe --tags --abbrev=0 "HEAD^" 2>/dev/null || echo "")
-          if [ -n "$PREV_TAG" ]; then
-            CHANGES=$(git log --pretty=format:"* %s (%h)" $PREV_TAG..HEAD)
-          else
-            CHANGES=$(git log --pretty=format:"* %s (%h)")
-          fi
-          echo "CHANGES<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
@@ -136,12 +193,7 @@ jobs:
           body: |
             ## Spotify Lyrics Translator v${{ steps.version.outputs.version }}
 
-            ### What's Changed
-            ${{ steps.changelog.outputs.CHANGES }}
-
-            ### Assets
-            - ZIP archive for manual installation
-            - DMG installer for easy installation
+            ${{ steps.release-notes.outputs.NOTES }}
 
             ### Installation
             1. Download either the ZIP or DMG file
@@ -151,5 +203,3 @@ jobs:
             3. If using ZIP:
                - Extract the ZIP file
                - Move the app to Applications folder
-
-            **Full Changelog**: https://github.com/${{ github.repository }}/compare/v$(git describe --tags --abbrev=0 "v${{ steps.version.outputs.version }}^")...v${{ steps.version.outputs.version }}
