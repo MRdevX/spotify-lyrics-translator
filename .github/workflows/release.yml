@@ -21,8 +21,6 @@ jobs:
       - name: Install system dependencies
         run: |
           brew install create-dmg
-          brew install python@3.11
-          brew link python@3.11
 
       - name: Set up virtual environment
         run: |
@@ -42,36 +40,57 @@ jobs:
           echo '{"sp_dc": ""}' > src/config/config.json
           ls -la src/config/
 
-      - name: Build App
-        run: |
-          source venv/bin/activate
-          which python3
-          python3 -V
-          python3 scripts/build_app.py
-
-      - name: Prepare App Icon
-        run: |
-          # Create temporary icon for DMG
-          mkdir -p .tmp_icon
-          cp assets/app_icon.icns .tmp_icon/.VolumeIcon.icns
-
-      - name: Sign App Bundle
+      - name: Setup Code Signing
         run: |
           # Create temporary keychain
           security create-keychain -p github_actions build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p github_actions build.keychain
+          security set-keychain-settings -t 3600 -l ~/Library/Keychains/build.keychain
 
-          # Sign the app bundle
-          codesign --force --deep --sign - "dist/Spotify Lyrics Translator.app"
+          # Create self-signed certificate
+          security create-certificate-authority \
+            -c "Spotify Lyrics Translator Dev" \
+            -o "MrDevX" \
+            -u "com.mrdevx.spotifylyricsapp" \
+            -k ~/Library/Keychains/build.keychain
+
+          # Allow codesign to access the keychain
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k github_actions build.keychain
+
+      - name: Build App
+        run: |
+          source venv/bin/activate
+          # Disable code signing in py2app
+          export PY2APP_SKIP_CODESIGN=1
+          python3 scripts/build_app.py
+
+      - name: Sign App Bundle
+        run: |
+          # Sign frameworks and libraries
+          find "dist/Spotify Lyrics Translator.app/Contents/Frameworks" -type f -name "*.so" -o -name "*.dylib" | while read lib; do
+            codesign --force --sign - --timestamp "$lib"
+          done
+
+          # Sign Python.framework if it exists
+          if [ -d "dist/Spotify Lyrics Translator.app/Contents/Frameworks/Python.framework" ]; then
+            codesign --force --sign - --timestamp "dist/Spotify Lyrics Translator.app/Contents/Frameworks/Python.framework"
+          fi
+
+          # Sign the main app bundle
+          codesign --force --deep --sign - --timestamp "dist/Spotify Lyrics Translator.app"
 
           # Verify signature
           codesign --verify --verbose "dist/Spotify Lyrics Translator.app"
 
+      - name: Prepare App Icon
+        run: |
+          mkdir -p .tmp_icon
+          cp assets/app_icon.icns .tmp_icon/.VolumeIcon.icns
+
       - name: Create DMG
         run: |
           source venv/bin/activate
-          # Create DMG with custom icon
           create-dmg \
             --volname "Spotify Lyrics Translator" \
             --volicon ".tmp_icon/.VolumeIcon.icns" \
