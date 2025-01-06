@@ -30,14 +30,13 @@ OPTIONS = {
         'urllib3',
         'charset_normalizer',
         'idna',
-        'beautifulsoup4',
+        'bs4',
         'soupsieve',
         'spotipy',
         'tqdm',
         'tinytag',
         'redis',
-        'PIL',
-        'Pillow'
+        'PIL'
     ],
     'includes': [
         'tkinter.ttk',
@@ -46,7 +45,10 @@ OPTIONS = {
         'pickle',
         'webbrowser',
         'os',
-        'sys'
+        'sys',
+        'PIL._tkinter_finder',
+        'bs4.builder',
+        'PIL.Image'
     ],
     'excludes': [
         'matplotlib',
@@ -62,7 +64,8 @@ OPTIONS = {
     'semi_standalone': True,
     'alias': False,
     'use_faulthandler': True,
-    'python_path': '/opt/homebrew/opt/python@3.11/Frameworks/Python.framework/Versions/3.11'
+    'arch': 'arm64',
+    'prefer_ppc': False
 }
 
 setup(
