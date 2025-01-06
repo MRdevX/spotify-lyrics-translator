@@ -428,6 +428,15 @@ Technical details: {str(e)}
         # Bind resize event
         self.root.bind('<Configure>', self.on_window_resize)
 
+        # Create main menu bar
+        menubar = tk.Menu(self.root)
+        self.root.config(menu=menubar)
+        
+        # Help menu
+        help_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Help", menu=help_menu)
+        help_menu.add_command(label="About", command=self.show_about_dialog)
+
     def save_cache(self):
         with open(CACHE_FILE, 'wb') as f:
             pickle.dump(self.lyrics_cache, f)
@@ -707,6 +716,119 @@ Technical details: {str(e)}
         self.tree.column(column, width=int(current_width))
         
         self.root.after(20, lambda: self.smooth_resize(column, start_width, end_width, steps-1))
+
+    def show_about_dialog(self):
+        """Show About dialog with application information"""
+        dialog = tk.Toplevel(self.root)
+        dialog.title("About Spotify Lyrics Translator")
+        dialog.geometry("600x500")
+        dialog.configure(bg='#282828')  # Spotify's dark theme
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        # Make dialog resizable
+        dialog.resizable(True, True)
+        
+        # Center the dialog
+        dialog.update_idletasks()
+        width = dialog.winfo_width()
+        height = dialog.winfo_height()
+        x = (dialog.winfo_screenwidth() // 2) - (width // 2)
+        y = (dialog.winfo_screenheight() // 2) - (height // 2)
+        dialog.geometry(f'{width}x{height}+{x}+{y}')
+
+        # Main frame
+        main_frame = ttk.Frame(dialog, padding="20")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # App title
+        title_label = ttk.Label(
+            main_frame,
+            text="Spotify Lyrics Translator",
+            font=('Helvetica', 16, 'bold'),
+            wraplength=500
+        )
+        title_label.pack(pady=(0, 10))
+
+        # Version
+        version_label = ttk.Label(
+            main_frame,
+            text="Version 1.0.0",
+            font=('Helvetica', 10),
+        )
+        version_label.pack(pady=(0, 20))
+
+        # Description
+        desc_label = ttk.Label(
+            main_frame,
+            text="A desktop application that shows real-time translations of Spotify lyrics while you listen to music.",
+            font=('Helvetica', 11),
+            wraplength=500,
+            justify=tk.CENTER
+        )
+        desc_label.pack(pady=(0, 20))
+
+        # Author info
+        author_frame = ttk.Frame(main_frame)
+        author_frame.pack(fill=tk.X, pady=10)
+
+        author_label = ttk.Label(
+            author_frame,
+            text="Author: Mahdi Rashidi",
+            font=('Helvetica', 11),
+        )
+        author_label.pack()
+
+        email_label = ttk.Label(
+            author_frame,
+            text="Email: m8rashidi@gmail.com",
+            font=('Helvetica', 11),
+            cursor="hand2",
+            foreground="#1DB954"  # Spotify green
+        )
+        email_label.pack()
+        email_label.bind("<Button-1>", lambda e: webbrowser.open("mailto:m8rashidi@gmail.com"))
+
+        # Repository link
+        repo_label = ttk.Label(
+            author_frame,
+            text="GitHub Repository",
+            font=('Helvetica', 11),
+            cursor="hand2",
+            foreground="#1DB954"  # Spotify green
+        )
+        repo_label.pack()
+        repo_label.bind("<Button-1>", lambda e: webbrowser.open("https://github.com/MRdevX/spotify-translator"))
+
+        # Credits
+        credits_frame = ttk.Frame(main_frame)
+        credits_frame.pack(fill=tk.X, pady=20)
+
+        credits_label = ttk.Label(
+            credits_frame,
+            text="Credits",
+            font=('Helvetica', 12, 'bold'),
+        )
+        credits_label.pack()
+
+        original_repo_label = ttk.Label(
+            credits_frame,
+            text="Original Project by @atahanuz",
+            font=('Helvetica', 11),
+            cursor="hand2",
+            foreground="#1DB954"  # Spotify green
+        )
+        original_repo_label.pack()
+        original_repo_label.bind("<Button-1>", lambda e: webbrowser.open("https://github.com/atahanuz/spotify-translator"))
+
+        # Close button
+        close_button = ttk.Button(
+            main_frame,
+            text="Close",
+            command=dialog.destroy,
+            style='Accent.TButton'
+        )
+        close_button.pack(pady=20)
 
     def run(self):
         self.root.mainloop()
