@@ -26,7 +26,15 @@ A desktop application that shows real-time translations of Spotify lyrics while 
 
 ## Installation
 
-### macOS
+### Download from Releases (Recommended)
+
+1. Go to the [Releases](https://github.com/MRdevX/spotify-translator/releases) page
+2. Download the latest `SpotifyTranslator.zip`
+3. Unzip the file
+4. Move "Spotify Lyrics Translator.app" to your Applications folder
+5. Right-click the app and select "Open" (required for first launch)
+
+### Build from Source
 
 1. Install Python 3.11 and Tkinter:
 
