@@ -1,4 +1,4 @@
-name: Create Release
+name: Build and Release
 
 on:
   push:
@@ -6,15 +6,13 @@ on:
       - "v*"
 
 jobs:
-  release:
+  build-macos:
     runs-on: macos-latest
-    permissions:
-      contents: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
-      - name: Set up Python 3.11
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
@@ -22,40 +20,21 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          brew install python-tk@3.11
           pip install -r requirements.txt
-          pip install py2app
+          brew install create-dmg
+          python -m pip install pyinstaller
 
-      - name: Create cache files
+      - name: Build App and Create DMG
         run: |
-          touch config.json
-          touch lyrics_cache.pkl
-
-      - name: Build macOS app
-        run: |
-          python setup.py py2app
-          cd dist && zip -r SpotifyTranslator.zip "Spotify Lyrics Translator.app"
+          python build_dmg.py
 
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            dist/SpotifyTranslator.zip
-          name: Release ${{ github.ref_name }}
-          body: |
-            Spotify Lyrics Translator ${{ github.ref_name }}
-
-            ## Installation
-            1. Download SpotifyTranslator.zip
-            2. Unzip the file
-            3. Move "Spotify Lyrics Translator.app" to your Applications folder
-            4. Right-click the app and select "Open" (required for first launch)
-
-            ## Requirements
-            - macOS 10.15 or later
-            - Spotify account
-
-            For detailed instructions, please visit the [README](https://github.com/MRdevX/spotify-translator/blob/main/readme.md)
+            dist/SpotifyTranslator.dmg
           draft: false
           prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
