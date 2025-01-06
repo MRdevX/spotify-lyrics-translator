@@ -67,9 +67,18 @@ jobs:
 
       - name: Build app
         run: |
+          # Build the app
           python build_app.py
+
+          # Create distribution files
           cd dist
+
+          # Create ZIP archive
           zip -r "Spotify Lyrics Translator-${{ steps.version.outputs.version }}.zip" "Spotify Lyrics Translator.app"
+
+          # Create DMG
+          cd ..
+          python create_dmg.py
 
       - name: Commit version changes
         run: |
@@ -82,6 +91,19 @@ jobs:
           git tag -a "v${{ steps.version.outputs.version }}" -m "Release v${{ steps.version.outputs.version }}"
           git push --tags
 
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 "HEAD^" 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            CHANGES=$(git log --pretty=format:"* %s (%h)" $PREV_TAG..HEAD)
+          else
+            CHANGES=$(git log --pretty=format:"* %s (%h)")
+          fi
+          echo "CHANGES<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
@@ -91,9 +113,24 @@ jobs:
           prerelease: false
           files: |
             dist/Spotify Lyrics Translator-${{ steps.version.outputs.version }}.zip
+            dist/Spotify Lyrics Translator-${{ steps.version.outputs.version }}.dmg
           body: |
-            ## What's Changed
+            ## Spotify Lyrics Translator v${{ steps.version.outputs.version }}
 
-            ${{ github.event.head_commit.message }}
+            ### What's Changed
+            ${{ steps.changelog.outputs.CHANGES }}
+
+            ### Assets
+            - ZIP archive for manual installation
+            - DMG installer for easy installation
+
+            ### Installation
+            1. Download either the ZIP or DMG file
+            2. If using DMG:
+               - Open the DMG file
+               - Drag the app to Applications folder
+            3. If using ZIP:
+               - Extract the ZIP file
+               - Move the app to Applications folder
 
             **Full Changelog**: https://github.com/${{ github.repository }}/compare/v$(git describe --tags --abbrev=0 "v${{ steps.version.outputs.version }}^")...v${{ steps.version.outputs.version }}
