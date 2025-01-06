@@ -1,238 +1,98 @@
-name: Release
+name: Build and Release
 
 on:
   push:
-    branches:
-      - main
-    paths-ignore:
-      - "version.json"
-      - "**.md"
-      - ".gitignore"
-      - ".github/**"
-  workflow_dispatch:
-    inputs:
-      version_type:
-        description: "Version bump type"
-        required: true
-        default: "auto"
-        type: choice
-        options:
-          - auto
-          - major
-          - minor
-          - patch
-
-defaults:
-  run:
-    shell: bash -l {0}
+    tags:
+      - "v*" # Trigger on version tags
 
 jobs:
-  version-and-release:
+  build:
     runs-on: macos-latest
-    permissions:
-      contents: write
-    if: ${{ !contains(github.event.head_commit.message, 'chore: bump version') }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v3
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.11"
+          python-version: "3.8"
           cache: "pip"
-
-      - name: Configure Git
-        run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
 
       - name: Install system dependencies
         run: |
-          brew install python-tk@3.11
           brew install create-dmg
 
       - name: Set up virtual environment
         run: |
           python -m venv venv
           source venv/bin/activate
-          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install --upgrade pip
 
       - name: Install Python dependencies
         run: |
           source venv/bin/activate
-          # Install core dependencies first
-          pip install \
-            Pillow==10.2.0 \
-            beautifulsoup4==4.12.3 \
-            certifi==2024.12.14 \
-            requests==2.31.0 \
-            urllib3==2.0.7 \
-            charset-normalizer==3.3.2 \
-            idna==3.6 \
-            soupsieve==2.5 \
-            spotipy==2.23.0 \
-            tqdm==4.66.1 \
-            tinytag==1.9.0 \
-            redis==5.0.1 \
-            deep-translator==1.11.4 \
-            syrics==0.4.5 \
-            sv-ttk==2.5.5 \
-            py2app==0.28.6
+          pip install -r requirements.txt
+          pip install py2app==0.28.6
 
-      - name: Determine version bump
-        id: version-bump
-        if: github.event.inputs.version_type == '' || github.event.inputs.version_type == 'auto'
+      - name: Build App
         run: |
           source venv/bin/activate
-          # Get commit messages since last tag
-          COMMITS=$(git log $(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD --pretty=format:"%s")
-          echo "Commit messages:"
-          echo "$COMMITS"
+          python scripts/build_app.py
 
-          # Determine version bump type based on commit messages
-          if echo "$COMMITS" | grep -iE "^break|^breaking|^major|BREAKING CHANGE"; then
-            echo "type=major" >> $GITHUB_OUTPUT
-          elif echo "$COMMITS" | grep -iE "^feat|^feature|^minor"; then
-            echo "type=minor" >> $GITHUB_OUTPUT
-          else
-            echo "type=patch" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Set manual version type
-        id: manual-version
-        if: github.event.inputs.version_type != '' && github.event.inputs.version_type != 'auto'
-        run: |
-          echo "type=${{ github.event.inputs.version_type }}" >> $GITHUB_OUTPUT
-
-      - name: Update version
-        id: version
+      - name: Create DMG
         run: |
           source venv/bin/activate
-          # Use manual version type if provided, otherwise use determined type
-          VERSION_TYPE="${{ github.event.inputs.version_type != '' && github.event.inputs.version_type != 'auto' && github.event.inputs.version_type || steps.version-bump.outputs.type }}"
-          echo "Using version type: $VERSION_TYPE"
+          python scripts/create_dmg.py
 
-          # Run version manager with determined bump type
-          python version_manager.py $VERSION_TYPE --no-tag
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
-          # Get the new version
-          VERSION=$(python -c "import json; print(json.load(open('version.json'))['major'], json.load(open('version.json'))['minor'], json.load(open('version.json'))['patch'], sep='.')")
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Generate release notes
-        id: release-notes
-        run: |
-          source venv/bin/activate
-          # Get the previous tag
-          PREV_TAG=$(git describe --tags --abbrev=0 "HEAD^" 2>/dev/null || echo "")
-
-          # Start collecting release notes
-          echo "NOTES<<EOF" >> $GITHUB_OUTPUT
-          echo "## What's Changed" >> $GITHUB_OUTPUT
-          echo "" >> $GITHUB_OUTPUT
-
-          if [ -n "$PREV_TAG" ]; then
-            # Group changes by type
-            echo "### 🚀 Features" >> $GITHUB_OUTPUT
-            git log $PREV_TAG..HEAD --pretty=format:"* %s" --grep="^feat" >> $GITHUB_OUTPUT
-            echo "" >> $GITHUB_OUTPUT
-            echo "" >> $GITHUB_OUTPUT
-            
-            echo "### 🐛 Bug Fixes" >> $GITHUB_OUTPUT
-            git log $PREV_TAG..HEAD --pretty=format:"* %s" --grep="^fix" >> $GITHUB_OUTPUT
-            echo "" >> $GITHUB_OUTPUT
-            echo "" >> $GITHUB_OUTPUT
-            
-            echo "### 📝 Documentation" >> $GITHUB_OUTPUT
-            git log $PREV_TAG..HEAD --pretty=format:"* %s" --grep="^docs" >> $GITHUB_OUTPUT
-            echo "" >> $GITHUB_OUTPUT
-            echo "" >> $GITHUB_OUTPUT
-            
-            echo "### ♻️ Refactoring" >> $GITHUB_OUTPUT
-            git log $PREV_TAG..HEAD --pretty=format:"* %s" --grep="^refactor" >> $GITHUB_OUTPUT
-            echo "" >> $GITHUB_OUTPUT
-            echo "" >> $GITHUB_OUTPUT
-            
-            echo "### 🔧 Other Changes" >> $GITHUB_OUTPUT
-            git log $PREV_TAG..HEAD --pretty=format:"* %s" --grep="^style\|^test\|^chore" >> $GITHUB_OUTPUT
-          else
-            echo "Initial release" >> $GITHUB_OUTPUT
-          fi
-
-          echo "" >> $GITHUB_OUTPUT
-          echo "**Full Changelog**: https://github.com/${{ github.repository }}/commits/${{ github.sha }}" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Build and package
-        run: |
-          source venv/bin/activate
-
-          # Clean any previous builds
-          rm -rf build dist
-
-          # Build the app
-          python build_app.py
-
-          # Ensure dist directory exists
-          if [ ! -d "dist" ]; then
-            echo "Error: dist directory not found after build"
-            exit 1
-          fi
-
-          # Create distribution files
-          cd dist
-          if [ ! -d "Spotify Lyrics Translator.app" ]; then
-            echo "Error: App bundle not found"
-            exit 1
-          fi
-
-          # Create ZIP archive
-          zip -r "Spotify Lyrics Translator-${{ steps.version.outputs.version }}.zip" "Spotify Lyrics Translator.app"
-
-          # Create DMG
-          cd ..
-          if [ ! -f "create_dmg.py" ]; then
-            echo "Error: create_dmg.py not found"
-            exit 1
-          fi
-          python create_dmg.py
-
-      - name: Commit version changes
-        run: |
-          git add version.json setup.py
-          git commit -m "chore: bump version to ${{ steps.version.outputs.version }}"
-          git push
-
-      - name: Create Git tag
-        run: |
-          git tag -a "v${{ steps.version.outputs.version }}" -m "Release v${{ steps.version.outputs.version }}"
-          git push --tags
-
-      - name: Create GitHub Release
+      - name: Create Release
+        id: create_release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: "v${{ steps.version.outputs.version }}"
-          name: "Release v${{ steps.version.outputs.version }}"
+          name: Release ${{ env.VERSION }}
           draft: false
           prerelease: false
           files: |
-            dist/Spotify Lyrics Translator-${{ steps.version.outputs.version }}.zip
-            dist/Spotify Lyrics Translator-${{ steps.version.outputs.version }}.dmg
+            dist/Spotify Lyrics Translator.app/**/*
+            dist/Spotify Lyrics Translator-*.dmg
           body: |
-            ## Spotify Lyrics Translator v${{ steps.version.outputs.version }}
+            # Spotify Lyrics Translator ${{ env.VERSION }}
 
-            ${{ steps.release-notes.outputs.NOTES }}
+            ## Installation
 
-            ### Installation
-            1. Download either the ZIP or DMG file
-            2. If using DMG:
-               - Open the DMG file
-               - Drag the app to Applications folder
-            3. If using ZIP:
-               - Extract the ZIP file
-               - Move the app to Applications folder
+            ### Option 1: DMG Installer (Recommended)
+            1. Download `Spotify Lyrics Translator.dmg`
+            2. Open the DMG file
+            3. Drag the app to your Applications folder
+            4. Launch from Applications or Spotlight
+
+            ### Option 2: Direct App
+            1. Download `Spotify Lyrics Translator.app.zip`
+            2. Extract the archive
+            3. Move to Applications folder
+            4. Launch the app
+
+            ## System Requirements
+            - macOS 10.13 or later
+            - Spotify Premium account
+            - Active internet connection
+
+            ## Changes in this version
+            <!-- Add release notes here -->
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload App Bundle
+        uses: actions/upload-artifact@v3
+        with:
+          name: Spotify Lyrics Translator.app
+          path: dist/Spotify Lyrics Translator.app
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@v3
+        with:
+          name: Spotify Lyrics Translator.dmg
+          path: dist/Spotify Lyrics Translator-*.dmg

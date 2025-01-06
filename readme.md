@@ -84,21 +84,23 @@ Powered by advanced translation APIs, supporting:
 
 ```
 spotify-translator/
-├── assets/                 # Application assets
-│   └── app_icon.icns      # App icon
-├── scripts/               # Build and utility scripts
-│   ├── build_app.py      # Main build script
-│   ├── build_dmg.py      # DMG creation orchestrator
-│   ├── create_dmg.py     # DMG creation utility
-│   └── setup.py          # py2app configuration
-├── src/                   # Source code
-│   ├── config/           # Configuration files
-│   ├── gui/              # GUI components
-│   ├── utils/            # Utility modules
-│   └── main.py           # Application entry point
-├── requirements.txt       # Python dependencies
-├── version.json          # Version information
-└── README.md             # Project documentation
+├── .github/                # GitHub configuration
+│   └── workflows/         # GitHub Actions workflows
+├── assets/                # Application assets
+│   └── app_icon.icns     # App icon
+├── scripts/              # Build and utility scripts
+│   ├── build_app.py     # Main build script
+│   ├── build_dmg.py     # DMG creation orchestrator
+│   ├── create_dmg.py    # DMG creation utility
+│   └── setup.py         # py2app configuration
+├── src/                  # Source code
+│   ├── config/          # Configuration files
+│   ├── gui/             # GUI components
+│   ├── utils/           # Utility modules
+│   └── main.py          # Application entry point
+├── requirements.txt      # Python dependencies
+├── version.json         # Version information
+└── README.md            # Project documentation
 ```
 
 ### Setup Development Environment
@@ -162,6 +164,46 @@ This script:
   - Packages the app for distribution
   - Creates a professional installer with custom background
   - Includes Applications folder shortcut
+
+### Release Process
+
+The project uses GitHub Actions for automated builds and releases. When you push a new version tag, it automatically:
+
+1. Builds the application
+2. Creates a DMG installer
+3. Creates a GitHub release
+4. Uploads the app bundle and DMG as release assets
+
+To create a new release:
+
+```bash
+# Update version in version.json
+# Commit your changes
+git add .
+git commit -m "chore: prepare for release x.y.z"
+
+# Create and push a new tag
+git tag -a vx.y.z -m "Release vx.y.z"
+git push origin vx.y.z
+```
+
+The GitHub Actions workflow will:
+
+- Trigger on the new tag
+- Build the app using py2app
+- Create a DMG installer
+- Create a GitHub release with:
+  - The app bundle
+  - The DMG installer
+  - Installation instructions
+  - Release notes template
+
+#### Release Requirements
+
+- Push access to the repository
+- Tag format: `vX.Y.Z` (e.g., v1.0.0)
+- Valid version.json file
+- All tests passing
 
 ## 🤝 Contributing
 
