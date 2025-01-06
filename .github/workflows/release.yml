@@ -34,6 +34,12 @@ jobs:
           pip install -r requirements.txt
           pip install py2app==0.28.6
 
+      - name: Verify config
+        run: |
+          mkdir -p src/config
+          echo '{"sp_dc": ""}' > src/config/config.json
+          ls -la src/config/
+
       - name: Build App
         run: |
           source venv/bin/activate
