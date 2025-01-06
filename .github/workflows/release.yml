@@ -26,6 +26,11 @@ jobs:
           pip install -r requirements.txt
           pip install py2app
 
+      - name: Create cache files
+        run: |
+          touch config.json
+          touch lyrics_cache.pkl
+
       - name: Build macOS app
         run: |
           python setup.py py2app

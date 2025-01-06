@@ -31,6 +31,11 @@ jobs:
         run: |
           python -m pytest tests/ || echo "No tests found"
 
+      - name: Create cache files
+        run: |
+          touch config.json
+          touch lyrics_cache.pkl
+
       - name: Build macOS app
         run: |
           pip install py2app
