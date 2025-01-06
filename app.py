@@ -21,29 +21,6 @@ Then run the application again.
 try:
     import tkinter as tk
     from tkinter import ttk, messagebox
-    
-    # Check Tk version
-    root = tk.Tk()
-    tk_version = root.tk.call('info', 'patchlevel')
-    root.destroy()
-    
-    if tk_version.startswith('9'):
-        print("""
-Warning: Incompatible Tk version detected (9.x)
-Please install Tk 8.6 with Python 3.11:
-
-macOS:
-    brew install python@3.11
-    brew install python-tk@3.11
-    python3.11 -m venv venv
-    source venv/bin/activate
-    pip install -r requirements.txt
-
-Ubuntu/Debian:
-    sudo apt-get install python3.11-tk
-        """)
-        exit(1)
-        
 except ImportError:
     print("""
 Error: Tkinter is not installed!
@@ -270,7 +247,7 @@ Technical details: {str(e)}
     def initialize_main_gui(self):
         """Initialize the main application GUI"""
         # Configure the window with app name
-        self.root.title("Spotify Lyrics Translator")  # Set constant app name
+        self.root.title("Spotify Lyrics Translator")
         self.root.geometry("900x600")
         self.root.minsize(800, 500)
         
@@ -280,52 +257,112 @@ Technical details: {str(e)}
         
         # Configure custom styles
         style.configure(
+            "Song.TLabel",
+            font=('Helvetica', 14, 'bold'),
+            foreground='#1DB954'  # Spotify green
+        )
+        style.configure(
+            "Info.TLabel",
+            font=('Helvetica', 10),
+            foreground='#B3B3B3'  # Spotify light gray
+        )
+        
+        # Configure Treeview style with column dividers
+        style.configure(
             "Treeview",
             font=('Helvetica', 11),
             rowheight=30,
             background='#282828',
             foreground='#FFFFFF',
-            fieldbackground='#282828'
+            fieldbackground='#282828',
+            borderwidth=0,  # Remove default borders
+            dividerwidth=2,  # Add custom divider width
+            dividercolor='#404040'  # Divider color
         )
         
         style.configure(
             "Treeview.Heading",
             font=('Helvetica', 12, 'bold'),
-            background='#1DB954',  # Spotify green
+            background='#1DB954',
             foreground='white'
         )
         
+        # Configure selection colors
         style.map(
             'Treeview',
-            background=[('selected', '#1DB954')],
+            background=[('selected', '#1DB954')],  # Spotify green for selected item
             foreground=[('selected', 'white')]
         )
+
+        # Create tooltip
+        self.tooltip = None
         
-        # Main container
-        main_container = ttk.Frame(self.root, padding="10")
+        # Create right-click menu for column management
+        self.column_menu = tk.Menu(self.root, tearoff=0)
+        self.column_menu.add_command(label="Reset Column Widths", command=self.reset_column_widths)
+        
+        # Main container with animation frame
+        self.animation_frame = ttk.Frame(self.root)
+        self.animation_frame.pack(fill=tk.BOTH, expand=True)
+        
+        main_container = ttk.Frame(self.animation_frame, padding="10")
         main_container.pack(fill=tk.BOTH, expand=True)
         
-        # Header frame
-        header_frame = ttk.Frame(main_container)
-        header_frame.pack(fill=tk.X, pady=(0, 10))
+        # Song info frame
+        song_info_frame = ttk.Frame(main_container)
+        song_info_frame.pack(fill=tk.X, pady=(0, 10))
         
-        # Current song info with better styling
+        # Left side: Song info
+        song_details_frame = ttk.Frame(song_info_frame)
+        song_details_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        
+        # Song title and artist
         self.song_label = ttk.Label(
-            header_frame,
-            text="Loading...",  # Default text while loading
-            font=('Helvetica', 14, 'bold'),
-            foreground='#1DB954'  # Spotify green
+            song_details_frame,
+            text="Loading...",
+            style="Song.TLabel"
         )
-        self.song_label.pack(side=tk.LEFT, padx=(5, 0))
+        self.song_label.pack(anchor='w')
         
-        # Current time with matching style
-        self.current_time_label = ttk.Label(
-            header_frame,
-            text="00:00",
-            font=('Helvetica', 12)
+        # Album name
+        self.album_label = ttk.Label(
+            song_details_frame,
+            text="",
+            style="Info.TLabel"
         )
-        self.current_time_label.pack(side=tk.RIGHT, padx=(0, 5))
+        self.album_label.pack(anchor='w')
         
+        # Right side: Time info
+        time_frame = ttk.Frame(song_info_frame)
+        time_frame.pack(side=tk.RIGHT, padx=(10, 0))
+        
+        # Current/Total time
+        self.time_label = ttk.Label(
+            time_frame,
+            text="0:00 / 0:00",
+            style="Info.TLabel"
+        )
+        self.time_label.pack(anchor='e')
+        
+        # Progress bar
+        self.progress_var = tk.DoubleVar()
+        self.progress_bar = ttk.Progressbar(
+            main_container,
+            variable=self.progress_var,
+            mode='determinate',
+            style="Spotify.Horizontal.TProgressbar"
+        )
+        self.progress_bar.pack(fill=tk.X, pady=(0, 10))
+        
+        # Configure progress bar style
+        style.configure(
+            "Spotify.Horizontal.TProgressbar",
+            troughcolor='#404040',
+            background='#1DB954',
+            darkcolor='#1DB954',
+            lightcolor='#1DB954'
+        )
+
         # Create frame for Treeview and Scrollbar
         tree_frame = ttk.Frame(main_container)
         tree_frame.pack(fill=tk.BOTH, expand=True)
@@ -338,14 +375,17 @@ Technical details: {str(e)}
             style="Treeview"
         )
         
-        # Configure columns
-        self.tree.heading("Time", text="Time", anchor='w')
-        self.tree.heading("Original Lyrics", text="Original Lyrics", anchor='w')
-        self.tree.heading("Translated Lyrics", text="Translated Lyrics", anchor='w')
+        # Enable column resizing
+        for col in ("Time", "Original Lyrics", "Translated Lyrics"):
+            self.tree.heading(col, text=col, anchor='w')
+            self.tree.column(col, stretch=True)  # Allow column stretching
         
-        self.tree.column("Time", width=100, minwidth=100, anchor='w')
-        self.tree.column("Original Lyrics", width=350, minwidth=200, anchor='w')
-        self.tree.column("Translated Lyrics", width=350, minwidth=200, anchor='w')
+        # Store original column widths
+        self.default_widths = {
+            "Time": 60,
+            "Original Lyrics": 350,
+            "Translated Lyrics": 350
+        }
         
         # Add scrollbar
         scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=self.tree.yview)
@@ -354,6 +394,11 @@ Technical details: {str(e)}
         # Pack Treeview and Scrollbar
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Bind events AFTER creating the methods
+        self.tree.bind('<Motion>', self.show_tooltip)
+        self.tree.bind('<Leave>', self.hide_tooltip)
+        self.tree.bind('<Button-3>', self.show_column_menu)  # Right-click menu
         
         # Status bar
         self.status_bar = ttk.Label(
@@ -380,6 +425,9 @@ Technical details: {str(e)}
         # Start update loop
         self.root.after(500, self.update_display)
 
+        # Bind resize event
+        self.root.bind('<Configure>', self.on_window_resize)
+
     def save_cache(self):
         with open(CACHE_FILE, 'wb') as f:
             pickle.dump(self.lyrics_cache, f)
@@ -397,38 +445,62 @@ Technical details: {str(e)}
         current_song, current_position = self.get_current_playback_position()
         if current_song:
             song_id = current_song['item']['id']
+            song_name = current_song['item']['name']
+            artist_name = current_song['item']['artists'][0]['name']
+            album_name = current_song['item']['album']['name']
+            duration = current_song['item']['duration_ms']
+            is_playing = current_song['is_playing']
+            
+            # Update song info
+            song_display = f"{song_name} - {artist_name}"
+            self.song_label.config(text=song_display)
+            self.album_label.config(text=album_name)
+            
+            # Update time and progress
+            current_time = self.ms_to_min_sec(current_position)
+            total_time = self.ms_to_min_sec(duration)
+            self.time_label.config(text=f"{current_time} / {total_time}")
+            
+            # Update progress bar
+            progress_percent = (current_position / duration) * 100
+            self.progress_var.set(progress_percent)
+            
+            # Update lyrics if song changed
             if song_id != self.current_song_id:
                 self.current_song_id = song_id
                 self.update_lyrics()
-
-            # Update time display
-            self.current_time_label.config(text=self.ms_to_min_sec(current_position))
             
-            # Update currently playing line
-            last_index = None
-            for item in self.tree.get_children():
-                item_data = self.tree.item(item)
-                start_time = int(item_data['values'][0].split(":")[0]) * 60000 + int(item_data['values'][0].split(":")[1]) * 1000
-                if start_time <= current_position:
-                    last_index = item
-                else:
-                    break
-            if last_index:
-                self.tree.selection_set(last_index)
-                self.tree.see(last_index)
-
+            # Update currently playing line in lyrics
+            self.update_current_lyric(current_position)
         else:
             # No song is playing
             self.song_label.config(text="No song playing")
-            self.current_time_label.config(text="00:00")
-
+            self.album_label.config(text="")
+            self.time_label.config(text="0:00 / 0:00")
+            self.progress_var.set(0)
+        
         self.root.after(500, self.update_display)
 
+    def update_current_lyric(self, current_position):
+        """Update the currently playing lyric in the tree view"""
+        last_index = None
+        for item in self.tree.get_children():
+            item_data = self.tree.item(item)
+            start_time = int(item_data['values'][0].split(":")[0]) * 60000 + int(item_data['values'][0].split(":")[1]) * 1000
+            if start_time <= current_position:
+                last_index = item
+            else:
+                break
+        if last_index:
+            self.tree.selection_set(last_index)
+            self.tree.see(last_index)
+
     def ms_to_min_sec(self, ms):
+        """Convert milliseconds to MM:SS format"""
         ms = int(ms)
         minutes = ms // 60000
         seconds = (ms % 60000) // 1000
-        return f"{minutes}:{seconds:02}"
+        return f"{minutes}:{seconds:02d}"
 
     def translate_line(self, translator, line):
         original_text = line['words']
@@ -500,6 +572,7 @@ Technical details: {str(e)}
         self.adjust_column_widths()
 
     def adjust_column_widths(self):
+        """Adjust column widths with animation"""
         min_time_width = 60
         max_original_length = 0
         max_translated_length = 0
@@ -517,24 +590,121 @@ Technical details: {str(e)}
         self.root.update_idletasks()
         width = self.tree.winfo_reqwidth()
 
+        # Calculate widths based on content
         orig_length = max_original_length * 15
         trans_length = max_translated_length * 15
 
+        # Adjust for different languages
         if self.language == "ja":
             orig_length = max_original_length * 23
         if self.language == "ru":
             orig_length = max_original_length * 18
             trans_length = max_translated_length * 19
 
-        width = min_time_width + orig_length + trans_length
-        height = line_count * 17 + 100
+        # Get window width
+        window_width = self.root.winfo_width()
+        available_width = window_width - min_time_width - 50  # Account for scrollbar and padding
 
-        current_width = self.root.winfo_width()
+        # Calculate proportional widths
+        total_content = orig_length + trans_length
+        if total_content > 0:
+            orig_ratio = orig_length / total_content
+            trans_ratio = trans_length / total_content
+            
+            orig_width = int(available_width * orig_ratio)
+            trans_width = int(available_width * trans_ratio)
+        else:
+            orig_width = available_width // 2
+            trans_width = available_width // 2
 
-        self.tree.column("Time", width=min_time_width, minwidth=min_time_width)
-        self.tree.column("Original Lyrics", width=orig_length)
-        self.tree.column("Translated Lyrics", width=trans_length)
-        self.root.geometry(f"{current_width}x{height}")
+        # Set minimum widths
+        orig_width = max(200, orig_width)
+        trans_width = max(200, trans_width)
+
+        # Animate the resizing
+        for col, (old_width, new_width) in {
+            "Time": (self.tree.column("Time")['width'], min_time_width),
+            "Original Lyrics": (self.tree.column("Original Lyrics")['width'], orig_width),
+            "Translated Lyrics": (self.tree.column("Translated Lyrics")['width'], trans_width)
+        }.items():
+            if abs(old_width - new_width) > 5:  # Only animate if change is significant
+                self.smooth_resize(col, old_width, new_width)
+            else:
+                self.tree.column(col, width=new_width)
+
+        # Update window height
+        height = line_count * 30 + 100
+        self.root.geometry(f"{window_width}x{height}")
+
+    def on_window_resize(self, event=None):
+        """Handle window resize event"""
+        if event.widget == self.root:
+            self.adjust_column_widths()
+
+    def show_tooltip(self, event):
+        """Show tooltip for truncated text"""
+        item = self.tree.identify_row(event.y)
+        column = self.tree.identify_column(event.x)
+        
+        if item and column:
+            col_idx = int(column[1]) - 1
+            values = self.tree.item(item)['values']
+            if col_idx < len(values):
+                cell_value = str(values[col_idx])
+                
+                # Get cell width
+                col_width = self.tree.column(self.tree.heading(column)['text'])['width']
+                text_width = self.tree.tk.call('font', 'measure', self.tree.cget('font'), cell_value)
+                
+                # Show tooltip only if text is truncated
+                if text_width > col_width:
+                    if self.tooltip:
+                        self.tooltip.destroy()
+                    
+                    x, y, _, _ = self.tree.bbox(item, column)
+                    x += self.tree.winfo_rootx()
+                    y += self.tree.winfo_rooty()
+                    
+                    self.tooltip = tk.Toplevel(self.tree)
+                    self.tooltip.wm_overrideredirect(True)
+                    
+                    label = ttk.Label(
+                        self.tooltip,
+                        text=cell_value,
+                        background='#282828',
+                        foreground='white',
+                        padding=5
+                    )
+                    label.pack()
+                    
+                    self.tooltip.geometry(f"+{x}+{y+25}")
+
+    def hide_tooltip(self, event=None):
+        """Hide the tooltip"""
+        if self.tooltip:
+            self.tooltip.destroy()
+            self.tooltip = None
+
+    def show_column_menu(self, event):
+        """Show right-click menu for column management"""
+        self.column_menu.post(event.x_root, event.y_root)
+
+    def reset_column_widths(self):
+        """Reset columns to default widths"""
+        for col, width in self.default_widths.items():
+            self.tree.column(col, width=width)
+        self.adjust_column_widths()
+
+    def smooth_resize(self, column, start_width, end_width, steps=10):
+        """Animate column resizing"""
+        if steps <= 0:
+            self.tree.column(column, width=end_width)
+            return
+        
+        current_width = start_width + (end_width - start_width) * (1 - steps/10)
+        self.tree.column(column, width=int(current_width))
+        
+        self.root.after(20, lambda: self.smooth_resize(column, start_width, end_width, steps-1))
 
     def run(self):
         self.root.mainloop()
