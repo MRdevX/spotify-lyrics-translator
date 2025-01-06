@@ -3,3 +3,5 @@ lyrics_cache.pkl
 venv/
 config.json
 *.json
+build/
+dist/
