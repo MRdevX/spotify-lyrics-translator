@@ -701,7 +701,9 @@ Technical details: {str(e)}
             self.tree.column(column, width=end_width)
             return
         
-        current_width = start_width + (end_width - start_width) * (1 - steps/10)
+        # Calculate the current width using proper linear interpolation
+        progress = (10 - steps) / 10  # Progress from 0 to 1
+        current_width = start_width + (end_width - start_width) * progress
         self.tree.column(column, width=int(current_width))
         
         self.root.after(20, lambda: self.smooth_resize(column, start_width, end_width, steps-1))
