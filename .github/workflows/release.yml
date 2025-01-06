@@ -41,6 +41,8 @@ jobs:
           ls -la src/config/
 
       - name: Setup Code Signing
+        id: setup_signing
+        continue-on-error: true
         env:
           CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_APPLICATION_CER }}
           CERTIFICATE_KEY_BASE64: ${{ secrets.DEVELOPER_ID_APPLICATION_KEY }}
@@ -86,6 +88,9 @@ jobs:
           python3 scripts/build_app.py
 
       - name: Sign App Bundle
+        id: sign_app
+        continue-on-error: true
+        if: steps.setup_signing.outcome == 'success'
         env:
           DEVELOPER_ID: ${{ secrets.DEVELOPER_ID_APPLICATION_NAME }}
         run: |
@@ -117,19 +122,34 @@ jobs:
           # Verify signature
           codesign --verify --verbose=4 "dist/Spotify Lyrics Translator.app"
 
+      - name: Handle Unsigned App
+        if: steps.setup_signing.outcome != 'success' || steps.sign_app.outcome != 'success'
+        run: |
+          cd dist
+          mv "Spotify Lyrics Translator.app" "Spotify Lyrics Translator (Unsigned).app"
+          echo "APP_NAME=Spotify Lyrics Translator (Unsigned)" >> $GITHUB_ENV
+          cd ..
+
+      - name: Set Signed App Name
+        if: steps.setup_signing.outcome == 'success' && steps.sign_app.outcome == 'success'
+        run: |
+          echo "APP_NAME=Spotify Lyrics Translator" >> $GITHUB_ENV
+
       - name: Notarize App
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        id: notarize_app
+        continue-on-error: true
+        if: steps.setup_signing.outcome == 'success' && steps.sign_app.outcome == 'success'
         uses: lando/notarize-action@v2
         with:
-          product-path: "dist/Spotify Lyrics Translator.app"
+          product-path: "dist/${{ env.APP_NAME }}.app"
           appstore-connect-username: ${{ secrets.APPLE_ACCOUNT_USERNAME }}
           appstore-connect-password: ${{ secrets.APPLE_ACCOUNT_PASSWORD }}
           appstore-connect-team-id: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Staple App
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        if: steps.notarize_app.outcome == 'success'
         run: |
-          xcrun stapler staple "dist/Spotify Lyrics Translator.app"
+          xcrun stapler staple "dist/${{ env.APP_NAME }}.app"
 
       - name: Prepare App Icon
         run: |
@@ -140,45 +160,50 @@ jobs:
         run: |
           source venv/bin/activate
           create-dmg \
-            --volname "Spotify Lyrics Translator" \
+            --volname "${{ env.APP_NAME }}" \
             --volicon ".tmp_icon/.VolumeIcon.icns" \
             --window-pos 200 120 \
             --window-size 800 400 \
             --icon-size 100 \
-            --icon "Spotify Lyrics Translator.app" 200 200 \
-            --hide-extension "Spotify Lyrics Translator.app" \
+            --icon "${{ env.APP_NAME }}.app" 200 200 \
+            --hide-extension "${{ env.APP_NAME }}.app" \
             --app-drop-link 600 200 \
             --no-internet-enable \
-            "dist/Spotify Lyrics Translator.dmg" \
-            "dist/Spotify Lyrics Translator.app"
+            "dist/${{ env.APP_NAME }}.dmg" \
+            "dist/${{ env.APP_NAME }}.app"
 
       - name: Sign DMG
+        id: sign_dmg
+        continue-on-error: true
+        if: steps.setup_signing.outcome == 'success' && steps.sign_app.outcome == 'success'
         env:
           DEVELOPER_ID: ${{ secrets.DEVELOPER_ID_APPLICATION_NAME }}
         run: |
           codesign --force --sign "$DEVELOPER_ID" \
             --options runtime \
             --timestamp \
-            "dist/Spotify Lyrics Translator.dmg"
+            "dist/${{ env.APP_NAME }}.dmg"
 
       - name: Notarize DMG
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        id: notarize_dmg
+        continue-on-error: true
+        if: steps.sign_dmg.outcome == 'success'
         uses: lando/notarize-action@v2
         with:
-          product-path: "dist/Spotify Lyrics Translator.dmg"
+          product-path: "dist/${{ env.APP_NAME }}.dmg"
           appstore-connect-username: ${{ secrets.APPLE_ACCOUNT_USERNAME }}
           appstore-connect-password: ${{ secrets.APPLE_ACCOUNT_PASSWORD }}
           appstore-connect-team-id: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Staple DMG
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        if: steps.notarize_dmg.outcome == 'success'
         run: |
-          xcrun stapler staple "dist/Spotify Lyrics Translator.dmg"
+          xcrun stapler staple "dist/${{ env.APP_NAME }}.dmg"
 
       - name: Package App Bundle
         run: |
           cd dist
-          ditto -c -k --keepParent "Spotify Lyrics Translator.app" "Spotify Lyrics Translator.app.zip"
+          ditto -c -k --keepParent "${{ env.APP_NAME }}.app" "${{ env.APP_NAME }}.app.zip"
           cd ..
 
       - name: Get version from tag
@@ -193,21 +218,21 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            dist/Spotify Lyrics Translator.app.zip
-            dist/Spotify Lyrics Translator.dmg
+            dist/${{ env.APP_NAME }}.app.zip
+            dist/${{ env.APP_NAME }}.dmg
           body: |
             # Spotify Lyrics Translator ${{ env.VERSION }}
 
             ## Installation
 
             ### Option 1: DMG Installer (Recommended)
-            1. Download `Spotify Lyrics Translator.dmg`
+            1. Download `${{ env.APP_NAME }}.dmg`
             2. Open the DMG file
             3. Drag the app to your Applications folder
             4. Launch from Applications or Spotlight
 
             ### Option 2: Direct App
-            1. Download `Spotify Lyrics Translator.app.zip`
+            1. Download `${{ env.APP_NAME }}.app.zip`
             2. Extract the archive
             3. Move to Applications folder
             4. Launch the app
@@ -217,6 +242,9 @@ jobs:
             - Spotify Premium account
             - Active internet connection
 
+            ## Signing Status
+            ${{ steps.setup_signing.outcome == 'success' && steps.sign_app.outcome == 'success' && steps.notarize_app.outcome == 'success' && 'This app is signed and notarized by Apple.' || 'This is an unsigned build. You may need to right-click and select "Open" the first time you run it.' }}
+
             ## Changes in this version
             <!-- Add release notes here -->
         env:
@@ -225,11 +253,11 @@ jobs:
       - name: Upload App Bundle
         uses: actions/upload-artifact@v3
         with:
-          name: Spotify Lyrics Translator.app
-          path: dist/Spotify Lyrics Translator.app.zip
+          name: ${{ env.APP_NAME }}.app
+          path: dist/${{ env.APP_NAME }}.app.zip
 
       - name: Upload DMG
         uses: actions/upload-artifact@v3
         with:
-          name: Spotify Lyrics Translator.dmg
-          path: dist/Spotify Lyrics Translator.dmg
+          name: ${{ env.APP_NAME }}.dmg
+          path: dist/${{ env.APP_NAME }}.dmg
