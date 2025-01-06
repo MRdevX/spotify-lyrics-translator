@@ -1,32 +1,66 @@
-# Spotify Translator
+# Spotify Lyrics Translator
 
-Display translated lyrics of the currently playing Spotify track in real-time, extremely simple to use!
+Display translated lyrics of the currently playing Spotify track in real-time, with an easy-to-use interface!
+
+## Features
+- Real-time lyrics synchronization with Spotify
+- Automatic language detection and translation to English
+- Clean, modern interface
+- Caching system for faster loading of previously translated songs
+- Simple one-click installation
+
 ## Installation
 
-To get started, install the required Python packages:
+### For Users
+1. Download the latest release from the [Releases](https://github.com/yourusername/spotify-lyrics-translator/releases) page
+2. Run the SpotifyLyricsTranslator executable
+3. Follow the in-app instructions to authenticate with Spotify
 
+### For Developers
+
+1. Clone the repository:
 ```bash
-pip3 install syrics
-pip install deep-translator
-pip install sv-ttk
+git clone https://github.com/yourusername/spotify-lyrics-translator.git
+cd spotify-lyrics-translator
 ```
 
-Now download `app.py`. You only need to edit this part in the code (the 12th line):
+2. Create and activate a virtual environment:
 
-```python
-sp = Spotify("your_sp_dc")
+Windows:
+```bash
+python -m venv venv
+venv\Scripts\activate
 ```
 
-Follow the instructions here to find your Spotify `sp_dc` key:   [Finding sp_dc](https://github.com/akashrchandran/syrics/wiki/Finding-sp_dc)
-
-## Usage
-
-Run the app.py with this command, that's it! 
+macOS/Linux:
+```bash
+python3 -m venv venv
+source venv/bin/activate
 ```
+
+3. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+4. Run the application:
+```bash
 python app.py
 ```
 
-You should see the GUI application, which will stay open until closed and will show translated lyrics of each song in real-time. Yes it is as simple as running a single .py file, weren't you supposed to clone 5 Github repos and launch 3 Docker containers? 😂
+## First-Time Setup
+
+1. Launch the application
+2. Click the "Open Spotify" button in the authentication dialog
+3. Log in to Spotify if needed
+4. Press F12 to open Developer Tools
+5. Go to Application > Cookies > https://spotify.com
+6. Find 'sp_dc' cookie and copy its value
+7. Paste the value in the application's login dialog
+
+The app will remember your authentication for future uses.
+
+## Screenshots
 
 <table>
   <tr>
@@ -41,18 +75,41 @@ You should see the GUI application, which will stay open until closed and will s
   </tr>
 </table>
 
+## How It Works
 
+The program uses the Google Translate API to translate lyrics from any language to English. It maintains a cache of the last 1000 translated songs to improve performance. The cache is stored in your user directory and persists between sessions.
 
-The program uses the Google Translate API to translate lyrics from any language to English, which often takes 2-3 seconds. It builds a cache of lyrics of the last played 1000 songs to prevent translating the same songs repeatedly. You can change the cache size to any value (or 0 to disable it altogether). The cache will be written/read to the `lyrics_cache.pkl` file.
+## Troubleshooting
 
-Video Demo: https://youtu.be/OBQi-sNb3Ss
+### Common Issues
+
+1. **Authentication Error**
+   - Make sure you're logged into Spotify in your browser
+   - Verify that you copied the correct cookie value
+   - Try logging out and back into Spotify
+
+2. **No Lyrics Showing**
+   - Ensure the current song has lyrics available on Spotify
+   - Check your internet connection
+
+3. **Translation Not Working**
+   - Check your internet connection
+   - Try restarting the application
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Thanks
 
-Thanks to @akashrchandran for his Spotify Lyrics Api which made my app possible: https://github.com/akashrchandran/syrics <br>
-And thanks to Melisa [@melisahingl ](https://github.com/melisahingl) for her wonderful Russian music playlist :)
+Thanks to @akashrchandran for his Spotify Lyrics API which made this app possible: https://github.com/akashrchandran/syrics
 
 ## Contact
 
-You can write to me at atahanuz23@gmail.com for anything at any time.  
-However if it is about this program, it will be better if you raise an issue in the repo or submit a PR so everyone can see and contribute to the discussion.
+For bug reports and feature requests, please [open an issue](https://github.com/yourusername/spotify-lyrics-translator/issues) on GitHub.
+
+For other inquiries, you can reach me at atahanuz23@gmail.com.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
