@@ -167,41 +167,55 @@ This script:
 
 ### Release Process
 
-The project uses GitHub Actions for automated builds and releases. When you push a new version tag, it automatically:
-
-1. Builds the application
-2. Creates a DMG installer
-3. Creates a GitHub release
-4. Uploads the app bundle and DMG as release assets
+The project uses GitHub Actions for automated builds and releases. The process is managed by the version manager script in `scripts/version_manager.py`.
 
 To create a new release:
 
 ```bash
-# Update version in version.json
-# Commit your changes
-git add .
-git commit -m "chore: prepare for release x.y.z"
+# Update version and create release (choose one):
+python scripts/version_manager.py major  # For major version updates (x.0.0)
+python scripts/version_manager.py minor  # For minor version updates (0.x.0)
+python scripts/version_manager.py patch  # For patch updates (0.0.x)
 
-# Create and push a new tag
-git tag -a vx.y.z -m "Release vx.y.z"
-git push origin vx.y.z
+# Add release notes:
+python scripts/version_manager.py patch --notes "Fixed bug in lyrics display"
+
+# Test what would happen (dry run):
+python scripts/version_manager.py patch --dry-run
 ```
 
-The GitHub Actions workflow will:
+The version manager will:
 
-- Trigger on the new tag
+1. Verify the git repository is clean
+2. Update version.json with new version numbers
+3. Commit the version update
+4. Create and push a git tag
+5. Trigger the GitHub Actions workflow
+
+The GitHub Actions workflow will then:
+
 - Build the app using py2app
 - Create a DMG installer
 - Create a GitHub release with:
   - The app bundle
   - The DMG installer
   - Installation instructions
-  - Release notes template
+  - Release notes from version.json
+
+#### Version Manager Features
+
+- Semantic versioning (major.minor.patch)
+- Automatic build number increment
+- Release notes management
+- Git status verification
+- Dry run mode for testing
+- Automated git tag creation
+- GitHub Actions integration
 
 #### Release Requirements
 
 - Push access to the repository
-- Tag format: `vX.Y.Z` (e.g., v1.0.0)
+- Clean git working directory
 - Valid version.json file
 - All tests passing
 
