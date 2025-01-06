@@ -1,12 +1,18 @@
 """
 Setup script for building the macOS app using py2app
 """
+import os
+import sys
 from setuptools import setup
 
-APP = ['src/main.py']
+# Add the project root to Python path
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
+
+APP = [os.path.join(project_root, 'src/main.py')]
 DATA_FILES = [
-    ('src/config', ['src/config/config.json']),
-    ('assets', ['assets/app_icon.icns'])
+    ('src/config', [os.path.join(project_root, 'src/config/config.json')]),
+    ('assets', [os.path.join(project_root, 'assets/app_icon.icns')])
 ]
 
 OPTIONS = {
@@ -43,14 +49,21 @@ OPTIONS = {
         'PIL',
         'sv_ttk'
     ],
-    'iconfile': 'assets/app_icon.icns',
-    'resources': ['src']
+    'iconfile': os.path.join(project_root, 'assets/app_icon.icns'),
+    'resources': [os.path.join(project_root, 'src')]
 }
 
-setup(
-    name='Spotify Lyrics Translator',
-    app=APP,
-    data_files=DATA_FILES,
-    options={'py2app': OPTIONS},
-    setup_requires=['py2app'],
-) 
+def main():
+    # Change to project root directory
+    os.chdir(project_root)
+    
+    setup(
+        name='Spotify Lyrics Translator',
+        app=APP,
+        data_files=DATA_FILES,
+        options={'py2app': OPTIONS},
+        setup_requires=['py2app'],
+    )
+
+if __name__ == '__main__':
+    main() 

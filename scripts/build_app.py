@@ -9,16 +9,22 @@ import sys
 import platform
 import glob
 
+def get_project_root():
+    """Get the project root directory"""
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 def clean_build():
     """Clean previous build artifacts"""
     print("Cleaning previous builds...")
+    project_root = get_project_root()
     dirs_to_clean = ['build', 'dist']
     for dir_name in dirs_to_clean:
-        if os.path.exists(dir_name):
-            shutil.rmtree(dir_name)
+        dir_path = os.path.join(project_root, dir_name)
+        if os.path.exists(dir_path):
+            shutil.rmtree(dir_path)
     
     # Also clean .pyc files and __pycache__ directories
-    for root, dirs, files in os.walk('.'):
+    for root, dirs, files in os.walk(project_root):
         for d in dirs:
             if d == '__pycache__':
                 shutil.rmtree(os.path.join(root, d))
@@ -29,13 +35,15 @@ def clean_build():
 def install_requirements():
     """Install required packages"""
     print("Installing requirements...")
+    project_root = get_project_root()
     try:
         # Ensure pip is up to date
         subprocess.run([sys.executable, '-m', 'pip', 'install', '--upgrade', 'pip'], check=True)
         
         # Install requirements from file
+        requirements_path = os.path.join(project_root, 'requirements.txt')
         print("Installing requirements from requirements.txt...")
-        subprocess.run([sys.executable, '-m', 'pip', 'install', '-r', 'requirements.txt'], check=True)
+        subprocess.run([sys.executable, '-m', 'pip', 'install', '-r', requirements_path], check=True)
         
         # Install py2app with specific version
         print("Installing py2app...")
@@ -66,17 +74,19 @@ def install_requirements():
 
 def verify_files():
     """Verify all required files exist"""
+    project_root = get_project_root()
     required_files = [
         ('src/main.py', 'Main application file'),
         ('src/config/config.json', 'Configuration file'),
         ('assets/app_icon.icns', 'Application icon'),
         ('requirements.txt', 'Requirements file'),
-        ('setup.py', 'Setup configuration')
+        ('scripts/setup.py', 'Setup configuration')
     ]
     
     missing_files = []
     for file_path, description in required_files:
-        if not os.path.exists(file_path):
+        full_path = os.path.join(project_root, file_path)
+        if not os.path.exists(full_path):
             missing_files.append(f"{description} ({file_path})")
     
     if missing_files:
@@ -89,14 +99,17 @@ def build_app():
     """Build the macOS app"""
     print("Building macOS app...")
     try:
+        project_root = get_project_root()
+        os.chdir(project_root)  # Change to project root directory
         verify_files()
         
         # Build command for standalone app
+        setup_path = os.path.join(project_root, 'scripts/setup.py')
         build_cmd = [
             sys.executable,
-            'setup.py',
+            setup_path,
             'py2app',
-            '--no-strip',
+            '-A',  # Use alias mode for development
             '--packages=tkinter,deep_translator,syrics,sv_ttk,spotipy,PIL'
         ]
         
@@ -108,7 +121,7 @@ def build_app():
         subprocess.run(build_cmd, check=True)
         
         # Verify the app bundle
-        app_path = os.path.join('dist', 'Spotify Lyrics Translator.app')
+        app_path = os.path.join(project_root, 'dist', 'Spotify Lyrics Translator.app')
         if not os.path.exists(app_path):
             raise FileNotFoundError(f"App bundle not found at {app_path}")
         
@@ -141,6 +154,7 @@ def build_app():
 def verify_environment():
     """Verify the build environment"""
     print("\nVerifying build environment:")
+    project_root = get_project_root()
     
     # Check Python version
     python_version = sys.version.split()[0]
@@ -153,8 +167,9 @@ def verify_environment():
     print("✓ Running in virtual environment")
     
     # Check directory structure
-    if not os.path.isdir('src'):
-        raise EnvironmentError("Please run this script from the project root directory (where src/ is located)")
+    src_path = os.path.join(project_root, 'src')
+    if not os.path.isdir(src_path):
+        raise EnvironmentError("Project structure is invalid (src/ directory not found)")
     print("✓ Directory structure verified")
 
 def main():
