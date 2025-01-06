@@ -1,0 +1,7 @@
+from syrics.api import Spotify
+
+sp_dc = "AQDIKU7Lllniq2c4zTdHFhk942XYFv6wVHy5PWAKURMoJSsm0-QCxO4ELYp_lBt6S8GRqFIesgBlxtt409_ONMGcph3OVyguMx2rlmrh0M6Rj9NZ1L2K9S_8cXRwMSXTT5roVo6oPvCFUbTv98Gim-xdy852tvIKOqeHGbcPIHB-nP5VicUQnirDoUyrGikRWZfJh7kgr567u_uALoQ"
+
+sp = Spotify(sp_dc)
+current_song = sp.get_current_song()
+print(current_song)
