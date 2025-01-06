@@ -21,7 +21,6 @@ jobs:
       - name: Install system dependencies
         run: |
           brew install create-dmg
-          brew install graphicsmagick
 
       - name: Set up virtual environment
         run: |
@@ -48,8 +47,6 @@ jobs:
 
       - name: Prepare App Icon
         run: |
-          # Convert icns to png for DMG
-          gm convert assets/app_icon.icns assets/app_icon.png
           # Create temporary icon for DMG
           mkdir -p .tmp_icon
           cp assets/app_icon.icns .tmp_icon/.VolumeIcon.icns
