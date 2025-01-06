@@ -7,7 +7,19 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest]
+        include:
+          - os: macos-latest
+            output_name: "Spotify Lyrics Translator.app"
+            zip_name: "Spotify Lyrics Translator-macOS.zip"
+            dmg_name: "Spotify Lyrics Translator.dmg"
+          - os: windows-latest
+            output_name: "Spotify Lyrics Translator.exe"
+            zip_name: "Spotify Lyrics Translator-Windows.zip"
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v3
@@ -17,53 +29,61 @@ jobs:
         with:
           python-version: "3.11"
           cache: "pip"
-          architecture: "arm64"
+          architecture: "x64"
 
-      - name: Install system dependencies
+      - name: Install system dependencies (macOS)
+        if: matrix.os == 'macos-latest'
         run: |
           brew install create-dmg
 
       - name: Set up virtual environment
+        shell: bash
         run: |
-          python3 -m venv venv
-          source venv/bin/activate
-          python3 -m pip install --upgrade pip setuptools wheel
+          python -m venv venv
+          source venv/bin/activate || source venv/Scripts/activate
+          python -m pip install --upgrade pip setuptools wheel
 
       - name: Install Python dependencies
+        shell: bash
         run: |
-          source venv/bin/activate
-          python3 -m pip install -r requirements.txt
-          python3 -m pip install py2app==0.28.6
+          source venv/bin/activate || source venv/Scripts/activate
+          python -m pip install -r requirements.txt
+          if [ "${{ matrix.os }}" = "macos-latest" ]; then
+            python -m pip install py2app==0.28.6
+          else
+            python -m pip install pyinstaller==6.3.0
+          fi
 
       - name: Verify config
+        shell: bash
         run: |
           mkdir -p src/config
           echo '{"sp_dc": ""}' > src/config/config.json
           ls -la src/config/
 
-      - name: Build App
+      - name: Build App (macOS)
+        if: matrix.os == 'macos-latest'
+        shell: bash
         run: |
           source venv/bin/activate
-          # Set PYTHONPATH to ensure imports work correctly
           export PYTHONPATH=$PYTHONPATH:$PWD
-          # Force arm64 architecture for Apple Silicon
-          export ARCHFLAGS="-arch arm64"
-          # Build the app
-          python3 scripts/build_app.py
-          # Verify the app bundle
+          python scripts/build_app.py
           ls -la dist/"Spotify Lyrics Translator.app"/Contents/MacOS
           ls -la dist/"Spotify Lyrics Translator.app"/Contents/Resources
 
-      - name: Prepare App Icon
+      - name: Build App (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: bash
         run: |
-          mkdir -p .tmp_icon
-          cp assets/app_icon.icns .tmp_icon/.VolumeIcon.icns
+          source venv/Scripts/activate
+          export PYTHONPATH=$PYTHONPATH:$PWD
+          python scripts/build_app.py
+          ls -la dist
 
-      - name: Create DMG
+      - name: Create DMG (macOS)
+        if: matrix.os == 'macos-latest'
         run: |
-          # Set file permissions
           chmod -R 755 "dist/Spotify Lyrics Translator.app"
-          # Create DMG
           create-dmg \
             --volname "Spotify Lyrics Translator" \
             --volicon ".tmp_icon/.VolumeIcon.icns" \
@@ -77,31 +97,40 @@ jobs:
             "dist/Spotify Lyrics Translator.dmg" \
             "dist/Spotify Lyrics Translator.app"
 
-      - name: Package App Bundle
+      - name: Package App (macOS)
+        if: matrix.os == 'macos-latest'
         run: |
           cd dist
-          # Use ditto to preserve bundle structure and permissions
-          ditto -c -k --keepParent --rsrc "Spotify Lyrics Translator.app" "Spotify Lyrics Translator.app.zip"
+          ditto -c -k --keepParent --rsrc "Spotify Lyrics Translator.app" "${{ matrix.zip_name }}"
+          cd ..
+
+      - name: Package App (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          cd dist
+          7z a "${{ matrix.zip_name }}" "Spotify Lyrics Translator"/*
           cd ..
 
       - name: Get version from tag
         id: get_version
+        shell: bash
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
-      - name: Create Release
-        id: create_release
+      - name: Create Release (macOS)
+        if: matrix.os == 'macos-latest'
         uses: softprops/action-gh-release@v1
         with:
           name: Release ${{ env.VERSION }}
           draft: false
           prerelease: false
           files: |
-            dist/Spotify Lyrics Translator.app.zip
-            dist/Spotify Lyrics Translator.dmg
+            dist/${{ matrix.zip_name }}
+            dist/${{ matrix.dmg_name }}
           body: |
             # Spotify Lyrics Translator ${{ env.VERSION }}
 
-            ## Installation
+            ## Installation (macOS)
 
             ### Option 1: DMG Installer (Recommended)
             1. Download `Spotify Lyrics Translator.dmg`
@@ -110,12 +139,12 @@ jobs:
             4. Launch from Applications or Spotlight
 
             ### Option 2: Direct App
-            1. Download `Spotify Lyrics Translator.app.zip`
+            1. Download `Spotify Lyrics Translator-macOS.zip`
             2. Extract the archive
             3. Move to Applications folder
             4. Launch the app
 
-            ## System Requirements
+            ## System Requirements (macOS)
             - macOS 10.13 or later
             - Apple Silicon or Intel Mac
             - Spotify Premium account
@@ -126,14 +155,38 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload App Bundle
-        uses: actions/upload-artifact@v3
+      - name: Create Release (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: softprops/action-gh-release@v1
         with:
-          name: Spotify Lyrics Translator.app
-          path: dist/Spotify Lyrics Translator.app.zip
+          name: Release ${{ env.VERSION }}
+          draft: false
+          prerelease: false
+          files: |
+            dist/${{ matrix.zip_name }}
+          body: |
+            # Spotify Lyrics Translator ${{ env.VERSION }}
 
-      - name: Upload DMG
+            ## Installation (Windows)
+
+            1. Download `Spotify Lyrics Translator-Windows.zip`
+            2. Extract the archive
+            3. Run `Spotify Lyrics Translator.exe`
+
+            ## System Requirements (Windows)
+            - Windows 10 or later
+            - Spotify Premium account
+            - Active internet connection
+
+            ## Changes in this version
+            <!-- Add release notes here -->
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: Spotify Lyrics Translator.dmg
-          path: dist/Spotify Lyrics Translator.dmg
+          name: ${{ matrix.os }}-build
+          path: |
+            dist/${{ matrix.zip_name }}
+            ${{ matrix.os == 'macos-latest' && 'dist/Spotify Lyrics Translator.dmg' || '' }}

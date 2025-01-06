@@ -29,6 +29,8 @@ class AppConfig:
         if getattr(sys, 'frozen', False):
             if sys.platform == 'darwin':
                 app_data = os.path.expanduser('~/Library/Application Support/Spotify Lyrics Translator')
+            elif sys.platform == 'win32':
+                app_data = os.path.join(os.environ.get('APPDATA', ''), 'Spotify Lyrics Translator')
             else:
                 app_data = os.path.dirname(os.path.abspath(__file__))
         else:

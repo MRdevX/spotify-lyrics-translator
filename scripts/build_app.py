@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Build script for creating macOS app
+Build script for creating macOS and Windows apps
 """
 import os
 import subprocess
@@ -8,6 +8,7 @@ import shutil
 import sys
 import platform
 import glob
+from PIL import Image
 
 def get_project_root():
     """Get the project root directory"""
@@ -45,9 +46,13 @@ def install_requirements():
         print("Installing requirements from requirements.txt...")
         subprocess.run([sys.executable, '-m', 'pip', 'install', '-r', requirements_path], check=True)
         
-        # Install py2app with specific version
-        print("Installing py2app...")
-        subprocess.run([sys.executable, '-m', 'pip', 'install', '--upgrade', 'py2app==0.28.6'], check=True)
+        # Install build tools based on platform
+        if sys.platform == 'darwin':
+            print("Installing py2app...")
+            subprocess.run([sys.executable, '-m', 'pip', 'install', '--upgrade', 'py2app==0.28.6'], check=True)
+        else:
+            print("Installing pyinstaller...")
+            subprocess.run([sys.executable, '-m', 'pip', 'install', '--upgrade', 'pyinstaller==6.3.0'], check=True)
         
         # Verify critical imports
         print("\nVerifying installations:")
@@ -78,10 +83,17 @@ def verify_files():
     required_files = [
         ('src/main.py', 'Main application file'),
         ('src/config/config.json', 'Configuration file'),
-        ('assets/app_icon.icns', 'Application icon'),
-        ('requirements.txt', 'Requirements file'),
-        ('scripts/setup.py', 'Setup configuration')
+        ('requirements.txt', 'Requirements file')
     ]
+    
+    # Add platform-specific files
+    if sys.platform == 'darwin':
+        required_files.extend([
+            ('assets/app_icon.icns', 'Application icon'),
+            ('scripts/setup.py', 'Setup configuration')
+        ])
+    else:
+        required_files.append(('assets/app_icon.ico', 'Application icon'))
     
     missing_files = []
     for file_path, description in required_files:
@@ -95,9 +107,9 @@ def verify_files():
             print(f"  - {file}")
         raise FileNotFoundError("Required files are missing")
 
-def build_app():
-    """Build the macOS app"""
-    print("Building macOS app...")
+def build_macos_app():
+    """Build the macOS app using py2app"""
+    print("Building macOS application bundle...")
     try:
         verify_files()
         
@@ -108,10 +120,6 @@ def build_app():
             'py2app',
             '--packages=tkinter,deep_translator,syrics,sv_ttk,spotipy,PIL'
         ]
-        
-        # Add architecture flag if on Apple Silicon
-        if platform.machine() == 'arm64':
-            build_cmd.extend(['--arch=arm64'])
         
         print(f"Running build command: {' '.join(build_cmd)}")
         subprocess.run(build_cmd, check=True)
@@ -151,6 +159,103 @@ def build_app():
         print(f"Unexpected error during build: {e}")
         raise
 
+def build_windows_app():
+    """Build the Windows app using PyInstaller"""
+    print("Building Windows executable...")
+    try:
+        verify_files()
+        project_root = get_project_root()
+        
+        # Create spec file content
+        spec_content = f'''# -*- mode: python ; coding: utf-8 -*-
+
+block_cipher = None
+
+a = Analysis(
+    [os.path.join('{project_root}', 'src', 'main.py')],
+    pathex=['{project_root}'],
+    binaries=[],
+    datas=[
+        (os.path.join('{project_root}', 'src', 'config'), 'src/config'),
+        (os.path.join('{project_root}', 'assets'), 'assets'),
+    ],
+    hiddenimports=[
+        'tkinter',
+        'tkinter.ttk',
+        'PIL',
+        'PIL._tkinter_finder',
+        'deep_translator',
+        'syrics',
+        'sv_ttk',
+        'spotipy',
+    ],
+    hookspath=[],
+    hooksconfig={{}},
+    runtime_hooks=[],
+    excludes=[],
+    win_no_prefer_redirects=False,
+    win_private_assemblies=False,
+    cipher=block_cipher,
+    noarchive=False,
+)
+
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    [],
+    exclude_binaries=True,
+    name='Spotify Lyrics Translator',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=True,
+    console=False,
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+    icon=os.path.join('{project_root}', 'assets', 'app_icon.ico'),
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    name='Spotify Lyrics Translator',
+)
+'''
+        
+        # Write spec file
+        with open('spotify_translator.spec', 'w') as f:
+            f.write(spec_content)
+        
+        # Build using PyInstaller
+        subprocess.run([
+            sys.executable,
+            '-m',
+            'PyInstaller',
+            '--clean',
+            '--noconfirm',
+            'spotify_translator.spec'
+        ], check=True)
+        
+        print("\nBuild completed successfully!")
+        print(f"Executable created at: {os.path.abspath('dist/Spotify Lyrics Translator')}")
+        
+    except subprocess.CalledProcessError as e:
+        print(f"Error during build: {e}")
+        raise
+    except Exception as e:
+        print(f"Unexpected error during build: {e}")
+        raise
+
 def verify_environment():
     """Verify the build environment"""
     print("\nVerifying build environment:")
@@ -172,6 +277,34 @@ def verify_environment():
         raise EnvironmentError("Project structure is invalid (src/ directory not found)")
     print("✓ Directory structure verified")
 
+def convert_icon():
+    """Convert macOS icon to Windows format if needed"""
+    if sys.platform == 'win32':
+        try:
+            project_root = get_project_root()
+            icns_path = os.path.join(project_root, 'assets', 'app_icon.icns')
+            ico_path = os.path.join(project_root, 'assets', 'app_icon.ico')
+            
+            if not os.path.exists(ico_path) and os.path.exists(icns_path):
+                print("Converting icon to Windows format...")
+                # Convert ICNS to PNG first
+                img = Image.open(icns_path)
+                png_path = os.path.join(project_root, 'assets', 'temp_icon.png')
+                img.save(png_path, 'PNG')
+                
+                # Convert PNG to ICO
+                img = Image.open(png_path)
+                icon_sizes = [(16,16), (32,32), (48,48), (64,64), (128,128), (256,256)]
+                img.save(ico_path, format='ICO', sizes=icon_sizes)
+                
+                # Clean up temporary file
+                os.remove(png_path)
+                print("Icon conversion completed")
+                
+        except Exception as e:
+            print(f"Warning: Could not convert icon: {e}")
+            print("The application will use a default icon")
+
 def main():
     """Main build process"""
     try:
@@ -187,10 +320,14 @@ def main():
         verify_environment()
         clean_build()
         install_requirements()
-        build_app()
+        convert_icon()
+        
+        if sys.platform == 'darwin':
+            build_macos_app()
+        else:
+            build_windows_app()
         
         print("\nBuild process completed successfully!")
-        print("You can now move 'dist/Spotify Lyrics Translator.app' to your Applications folder.")
         
     except Exception as e:
         print(f"\nError: Build process failed: {str(e)}")
