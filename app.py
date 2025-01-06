@@ -113,44 +113,101 @@ class SpotifyLyricsTranslator:
         """Show dialog with instructions to get SP_DC cookie"""
         dialog = tk.Toplevel(self.root)
         dialog.title("Spotify Authentication")
-        dialog.geometry("600x400")
+        dialog.geometry("700x600")
+        dialog.configure(bg='#282828')  # Spotify's dark theme
         dialog.transient(self.root)
         dialog.grab_set()
-        
-        instructions = """
-        To use this app, you need to get your Spotify SP_DC cookie:
-        
-        1. Click the 'Open Spotify' button below
-        2. Log in to Spotify if needed
-        3. Press F12 to open Developer Tools
-        4. Go to Application > Cookies > https://spotify.com
-        5. Find 'sp_dc' cookie and copy its value
-        6. Paste the value in the field below
 
-        Note: Make sure to:
-        - Copy the entire cookie value
-        - Be logged into Spotify in your browser
-        - Use a fresh cookie value (try logging out and back in to Spotify)
-        """
+        # Make dialog resizable
+        dialog.resizable(True, True)
         
-        label = ttk.Label(dialog, text=instructions, wraplength=550)
-        label.pack(pady=20)
-        
+        # Center the dialog on screen
+        dialog.update_idletasks()
+        width = dialog.winfo_width()
+        height = dialog.winfo_height()
+        x = (dialog.winfo_screenwidth() // 2) - (width // 2)
+        y = (dialog.winfo_screenheight() // 2) - (height // 2)
+        dialog.geometry(f'{width}x{height}+{x}+{y}')
+
+        # Main frame
+        main_frame = ttk.Frame(dialog, padding="20")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Title
+        title_label = ttk.Label(
+            main_frame,
+            text="Connect to Spotify",
+            font=('Helvetica', 16, 'bold'),
+            wraplength=600
+        )
+        title_label.pack(pady=(0, 20))
+
+        # Step by step instructions with icons
+        steps = [
+            "1. Click the 'Open Spotify' button below",
+            "2. Log in to Spotify if needed",
+            "3. Press F12 to open Developer Tools",
+            "4. Click 'Application' tab in Developer Tools",
+            "5. Under 'Storage' expand 'Cookies'",
+            "6. Click on 'https://spotify.com'",
+            "7. Find 'sp_dc' cookie and copy its value",
+            "8. Paste the value below"
+        ]
+
+        # Create frame for steps
+        steps_frame = ttk.Frame(main_frame)
+        steps_frame.pack(fill=tk.BOTH, padx=20, pady=10)
+
+        for step in steps:
+            step_label = ttk.Label(
+                steps_frame,
+                text=step,
+                font=('Helvetica', 11),
+                wraplength=550
+            )
+            step_label.pack(anchor='w', pady=5)
+
+        # Buttons frame
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(fill=tk.X, pady=20)
+
         def open_spotify():
             webbrowser.open('https://open.spotify.com')
-        
-        open_button = ttk.Button(dialog, text="Open Spotify", command=open_spotify)
+
+        # Open Spotify button with icon
+        open_button = ttk.Button(
+            button_frame,
+            text="Open Spotify",
+            command=open_spotify,
+            style='Accent.TButton'
+        )
         open_button.pack(pady=10)
-        
+
+        # Cookie entry frame
+        entry_frame = ttk.Frame(main_frame)
+        entry_frame.pack(fill=tk.X, pady=10)
+
+        # Label for cookie entry
+        entry_label = ttk.Label(
+            entry_frame,
+            text="Paste your sp_dc cookie value here:",
+            font=('Helvetica', 11)
+        )
+        entry_label.pack(anchor='w', pady=(0, 5))
+
         cookie_var = tk.StringVar()
-        cookie_entry = ttk.Entry(dialog, textvariable=cookie_var, width=50)
-        cookie_entry.pack(pady=10)
-        
+        cookie_entry = ttk.Entry(
+            entry_frame,
+            textvariable=cookie_var,
+            width=50,
+            font=('Helvetica', 11)
+        )
+        cookie_entry.pack(fill=tk.X, pady=5)
+
         def save_cookie():
             sp_dc = cookie_var.get().strip()
             if sp_dc:
                 try:
-                    print(f"Attempting to initialize Spotify with cookie length: {len(sp_dc)}")
                     # Test the cookie
                     self.sp = Spotify(sp_dc)
                     
@@ -167,7 +224,7 @@ class SpotifyLyricsTranslator:
                     
                     # Save to config if valid
                     config_dir = os.path.dirname(CONFIG_FILE)
-                    if config_dir:  # Only create directory if CONFIG_FILE has a directory part
+                    if config_dir:
                         os.makedirs(config_dir, exist_ok=True)
                     
                     with open(CONFIG_FILE, 'w') as f:
@@ -178,66 +235,136 @@ class SpotifyLyricsTranslator:
                     self.initialize_main_gui()
                 except Exception as e:
                     error_message = f"""
-Authentication Error: {str(e)}
+Authentication Error
 
-Please try:
-1. Logging out of Spotify in your browser
-2. Logging back in
-3. Getting a fresh sp_dc cookie value
-4. Make sure you're copying the entire cookie value
+Please check:
+• You're logged into Spotify in your browser
+• You copied the entire cookie value
+• The cookie is fresh (try logging out and back in)
 
-If the problem persists, try using a private/incognito window to log in to Spotify.
+Technical details: {str(e)}
 """
                     print(f"Authentication error: {str(e)}")
-                    messagebox.showerror("Error", error_message)
+                    messagebox.showerror("Authentication Failed", error_message)
             else:
                 messagebox.showerror("Error", "Please enter the SP_DC cookie value.")
-        
-        save_button = ttk.Button(dialog, text="Save", command=save_cookie)
+
+        # Save button with accent style
+        save_button = ttk.Button(
+            entry_frame,
+            text="Connect",
+            command=save_cookie,
+            style='Accent.TButton'
+        )
         save_button.pack(pady=10)
+
+        # Help text
+        help_text = ttk.Label(
+            main_frame,
+            text="Having trouble? Try logging out of Spotify and back in to get a fresh cookie.",
+            font=('Helvetica', 10),
+            wraplength=550
+        )
+        help_text.pack(pady=20)
 
     def initialize_main_gui(self):
         """Initialize the main application GUI"""
-        # Apply theme
+        # Configure the window with app name
+        self.root.title("Spotify Lyrics Translator")  # Set constant app name
+        self.root.geometry("900x600")
+        self.root.minsize(800, 500)
+        
+        # Apply theme and styles
         style = ttk.Style(self.root)
-        style.theme_use("default")
-        style.configure("Treeview.Heading", font=('Helvetica', 12, 'bold'), background='#4CAF50', foreground='white')
-        style.configure("Treeview", font=('Arial', 14), rowheight=40, background='#E8F5E9', foreground='black', fieldbackground='#E8F5E9')
         sv_ttk.set_theme("dark")
-        style.configure("Treeview", rowheight=25)
-        style.map('Treeview', background=[('selected', '#81C784')], foreground=[('selected', 'white')])
         
-        # Force update of the Treeview style
-        self.root.update_idletasks()
+        # Configure custom styles
+        style.configure(
+            "Treeview",
+            font=('Helvetica', 11),
+            rowheight=30,
+            background='#282828',
+            foreground='#FFFFFF',
+            fieldbackground='#282828'
+        )
         
-        # Current time label
-        self.current_time_label = tk.Label(self.root, text="Current Time: 00:00", font=('Helvetica', 12, 'bold'), 
-                                         bg='#388E3C', fg='#fff', padx=10, pady=5)
-        self.current_time_label.pack(side=tk.TOP, fill=tk.X)
+        style.configure(
+            "Treeview.Heading",
+            font=('Helvetica', 12, 'bold'),
+            background='#1DB954',  # Spotify green
+            foreground='white'
+        )
         
-        # Create a frame to hold the Treeview and Scrollbar
-        frame = ttk.Frame(self.root, padding="10 10 10 10")
-        frame.pack(fill=tk.BOTH, expand=True)
+        style.map(
+            'Treeview',
+            background=[('selected', '#1DB954')],
+            foreground=[('selected', 'white')]
+        )
         
-        # Create and pack the treeview widget
-        style.configure("Treeview.Heading", foreground="lightgreen", font=('Helvetica', 14, 'bold'))
+        # Main container
+        main_container = ttk.Frame(self.root, padding="10")
+        main_container.pack(fill=tk.BOTH, expand=True)
         
-        self.tree = ttk.Treeview(frame, columns=("Time", "Original Lyrics", "Translated Lyrics"), 
-                                show="headings", style="Treeview")
-        self.tree.heading("Time", text="  Time", anchor='w')
-        self.tree.heading("Original Lyrics", text="  Original Lyrics", anchor='w')
-        self.tree.heading("Translated Lyrics", text="  Translated Lyrics", anchor='w')
-        self.tree.column("Time", width=200, minwidth=200, anchor='w')
-        self.tree.column("Original Lyrics", width=250, anchor='w')
-        self.tree.column("Translated Lyrics", width=250, anchor='w')
+        # Header frame
+        header_frame = ttk.Frame(main_container)
+        header_frame.pack(fill=tk.X, pady=(0, 10))
         
-        # Create the Scrollbar
-        scrollbar = ttk.Scrollbar(frame, orient="vertical", command=self.tree.yview)
+        # Current song info with better styling
+        self.song_label = ttk.Label(
+            header_frame,
+            text="Loading...",  # Default text while loading
+            font=('Helvetica', 14, 'bold'),
+            foreground='#1DB954'  # Spotify green
+        )
+        self.song_label.pack(side=tk.LEFT, padx=(5, 0))
+        
+        # Current time with matching style
+        self.current_time_label = ttk.Label(
+            header_frame,
+            text="00:00",
+            font=('Helvetica', 12)
+        )
+        self.current_time_label.pack(side=tk.RIGHT, padx=(0, 5))
+        
+        # Create frame for Treeview and Scrollbar
+        tree_frame = ttk.Frame(main_container)
+        tree_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Create and configure Treeview
+        self.tree = ttk.Treeview(
+            tree_frame,
+            columns=("Time", "Original Lyrics", "Translated Lyrics"),
+            show="headings",
+            style="Treeview"
+        )
+        
+        # Configure columns
+        self.tree.heading("Time", text="Time", anchor='w')
+        self.tree.heading("Original Lyrics", text="Original Lyrics", anchor='w')
+        self.tree.heading("Translated Lyrics", text="Translated Lyrics", anchor='w')
+        
+        self.tree.column("Time", width=100, minwidth=100, anchor='w')
+        self.tree.column("Original Lyrics", width=350, minwidth=200, anchor='w')
+        self.tree.column("Translated Lyrics", width=350, minwidth=200, anchor='w')
+        
+        # Add scrollbar
+        scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=scrollbar.set)
-        self.tree.pack(side='left', fill=tk.BOTH, expand=True)
-        scrollbar.pack(side='right', fill='y')
         
-        # Initialize variables
+        # Pack Treeview and Scrollbar
+        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Status bar
+        self.status_bar = ttk.Label(
+            main_container,
+            text="Ready",
+            font=('Helvetica', 10),
+            anchor='w'
+        )
+        self.status_bar.pack(fill=tk.X, pady=(10, 0))
+        
+        # Initialize other variables
         self.current_song_id = None
         self.translation_complete = False
         self.translated_lyrics_cache = None
@@ -250,7 +377,7 @@ If the problem persists, try using a private/incognito window to log in to Spoti
         else:
             self.lyrics_cache = {}
         
-        # Start the update loop
+        # Start update loop
         self.root.after(500, self.update_display)
 
     def save_cache(self):
@@ -274,7 +401,10 @@ If the problem persists, try using a private/incognito window to log in to Spoti
                 self.current_song_id = song_id
                 self.update_lyrics()
 
-            self.current_time_label.config(text=f"Current Time: {self.ms_to_min_sec(current_position)}")
+            # Update time display
+            self.current_time_label.config(text=self.ms_to_min_sec(current_position))
+            
+            # Update currently playing line
             last_index = None
             for item in self.tree.get_children():
                 item_data = self.tree.item(item)
@@ -286,6 +416,11 @@ If the problem persists, try using a private/incognito window to log in to Spoti
             if last_index:
                 self.tree.selection_set(last_index)
                 self.tree.see(last_index)
+
+        else:
+            # No song is playing
+            self.song_label.config(text="No song playing")
+            self.current_time_label.config(text="00:00")
 
         self.root.after(500, self.update_display)
 
@@ -323,10 +458,14 @@ If the problem persists, try using a private/incognito window to log in to Spoti
         current_song = self.sp.get_current_song()
         song_id = current_song['item']['id']
         song_name = current_song['item']['name']
+        artist_name = current_song['item']['artists'][0]['name']
         lyrics = self.sp.get_lyrics(song_id)
         lyrics_data = lyrics['lyrics']['lines'] if lyrics and 'lyrics' in lyrics and 'lines' in lyrics['lyrics'] else None
 
-        self.root.title(f"{song_name}")
+        # Update song label with current song info
+        song_display = f"{song_name} - {artist_name}"
+        self.song_label.config(text=song_display)
+        
         self.tree.delete(*self.tree.get_children())
 
         if lyrics_data:
@@ -343,7 +482,7 @@ If the problem persists, try using a private/incognito window to log in to Spoti
                 threading.Thread(target=self.translate_words, 
                               args=(lyrics_data, song_name, song_id, self.update_translations)).start()
         else:
-            self.tree.insert("", "end", values=("0:00", "(No lyrics)", ""))
+            self.tree.insert("", "end", values=("0:00", "(No lyrics available)", ""))
         self.adjust_column_widths()
 
     def update_translations(self, translated_lyrics):
