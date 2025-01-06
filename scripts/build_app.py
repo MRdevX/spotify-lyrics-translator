@@ -99,17 +99,13 @@ def build_app():
     """Build the macOS app"""
     print("Building macOS app...")
     try:
-        project_root = get_project_root()
-        os.chdir(project_root)  # Change to project root directory
         verify_files()
         
-        # Build command for standalone app
-        setup_path = os.path.join(project_root, 'scripts/setup.py')
+        # Build command for production app
         build_cmd = [
             sys.executable,
-            setup_path,
+            'scripts/setup.py',
             'py2app',
-            '-A',  # Use alias mode for development
             '--packages=tkinter,deep_translator,syrics,sv_ttk,spotipy,PIL'
         ]
         
@@ -121,7 +117,7 @@ def build_app():
         subprocess.run(build_cmd, check=True)
         
         # Verify the app bundle
-        app_path = os.path.join(project_root, 'dist', 'Spotify Lyrics Translator.app')
+        app_path = os.path.join('dist', 'Spotify Lyrics Translator.app')
         if not os.path.exists(app_path):
             raise FileNotFoundError(f"App bundle not found at {app_path}")
         
@@ -130,7 +126,8 @@ def build_app():
             'Contents/MacOS/Spotify Lyrics Translator',
             'Contents/Resources/lib/python*/site-packages',
             'Contents/Resources/src/main.py',
-            'Contents/Resources/src/config/config.json'
+            'Contents/Resources/src/config/config.json',
+            'Contents/Frameworks/Python.framework/Versions/Current/Python'
         ]
         
         for path in critical_paths:
@@ -140,6 +137,9 @@ def build_app():
                 print(f"✗ Warning: {path} not found in app bundle")
             else:
                 print(f"✓ Found {path}")
+        
+        # Fix permissions
+        subprocess.run(['chmod', '-R', '755', app_path], check=True)
         
         print("\nBuild completed successfully!")
         print(f"App bundle created at: {os.path.abspath(app_path)}")
