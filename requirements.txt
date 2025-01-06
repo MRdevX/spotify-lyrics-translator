@@ -1,7 +1,19 @@
 deep-translator==1.11.4
-syrics
+syrics==0.0.1.8
 sv-ttk==2.5.5
 pyinstaller==6.11.0
+Pillow==10.2.0
+certifi>=2024.2.2
+requests>=2.31.0
+urllib3>=2.1.0
+charset-normalizer>=3.3.2
+idna>=3.6
+beautifulsoup4>=4.12.3
+soupsieve>=2.5
+spotipy>=2.23.0
+tqdm>=4.66.1
+tinytag>=1.9.0
+redis>=5.0.1
 # System Requirements:
 # - Python 3.11 required
 # - Python Tkinter (on macOS: brew install python-tk@3.11) 

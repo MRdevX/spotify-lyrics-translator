@@ -1,4 +1,30 @@
 import sys
+import os
+
+# Get the correct path for config and cache files
+def get_app_data_path():
+    """Get the path where app data should be stored"""
+    if getattr(sys, 'frozen', False):
+        # Running in a bundle
+        if sys.platform == 'darwin':
+            # macOS: ~/Library/Application Support/Spotify Lyrics Translator
+            app_data = os.path.expanduser('~/Library/Application Support/Spotify Lyrics Translator')
+        else:
+            # Other platforms: use current directory
+            app_data = os.path.dirname(os.path.abspath(__file__))
+    else:
+        # Running in development
+        app_data = os.path.dirname(os.path.abspath(__file__))
+    
+    # Create directory if it doesn't exist
+    os.makedirs(app_data, exist_ok=True)
+    return app_data
+
+# Constants
+APP_DATA_PATH = get_app_data_path()
+CONFIG_FILE = os.path.join(APP_DATA_PATH, 'config.json')
+CACHE_FILE = os.path.join(APP_DATA_PATH, 'lyrics_cache.pkl')
+MAX_CACHE_SIZE = 1000
 
 # Check Python version before anything else
 if not (sys.version_info.major == 3 and sys.version_info.minor == 11):
@@ -49,17 +75,18 @@ import sv_ttk
 import webbrowser
 import json
 
-# Constants
-CONFIG_FILE = 'config.json'
-CACHE_FILE = 'lyrics_cache.pkl'
-MAX_CACHE_SIZE = 1000
-
 class SpotifyLyricsTranslator:
     def __init__(self):
-        self.root = tk.Tk()
-        self.root.title("Spotify Lyrics Translator")
-        self.sp = None
-        self.setup_gui()
+        try:
+            self.root = tk.Tk()
+            self.root.title("Spotify Lyrics Translator")
+            self.sp = None
+            self.setup_gui()
+        except Exception as e:
+            print(f"Error initializing app: {e}")
+            if hasattr(self, 'root'):
+                messagebox.showerror("Error", f"Failed to initialize application: {str(e)}")
+            raise e
         
     def setup_gui(self):
         # Initialize the authentication first
