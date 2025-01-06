@@ -2,6 +2,14 @@
 
 A desktop application that shows real-time translations of Spotify lyrics while you listen to music.
 
+> This project is forked and inspired from [spotify-translator](https://github.com/atahanuz/spotify-translator) by @atahanuz
+
+## Author
+
+- **Mahdi Rashidi**
+- Email: m8rashidi@gmail.com
+- Repository: [spotify-translator](https://github.com/MRdevX/spotify-translator)
+
 ## Features
 
 - Real-time lyrics synchronization with Spotify
@@ -30,7 +38,7 @@ brew install python-tk@3.11
 2. Clone the repository and run the application:
 
 ```bash
-git clone [your-repo-url]
+git clone git@github.com:MRdevX/spotify-translator.git
 cd spotify-translator
 ./run.sh
 ```
@@ -100,4 +108,8 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-[Your License]
+MIT License
+
+## Acknowledgments
+
+Special thanks to [@atahanuz](https://github.com/atahanuz) for the original project that inspired this fork.
