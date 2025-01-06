@@ -1,123 +1,148 @@
-# Spotify Lyrics Translator
+# 🎵 Spotify Lyrics Translator
 
-A desktop application that shows real-time translations of Spotify lyrics while you listen to music.
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/mrdevx/spotify-translator)
+![GitHub all releases](https://img.shields.io/github/downloads/mrdevx/spotify-translator/total)
+![GitHub](https://img.shields.io/github/license/mrdevx/spotify-translator)
+![macOS](https://img.shields.io/badge/macOS-10.13%2B-blue)
 
-> This project is forked and inspired from [spotify-translator](https://github.com/atahanuz/spotify-translator) by @atahanuz
+<p align="center">
+  <img src="app_icon.icns" alt="Spotify Lyrics Translator Logo" width="200">
+</p>
 
-## Author
+> 🌍 Real-time translation of Spotify lyrics in a beautiful, native macOS app
 
-- **Mahdi Rashidi**
-- Email: m8rashidi@gmail.com
-- Repository: [spotify-translator](https://github.com/MRdevX/spotify-translator)
+## ✨ Features
 
-## Features
+- 🔄 Real-time lyrics synchronization with Spotify
+- 🌐 Support for multiple translation languages
+- 🎨 Modern and native macOS interface
+- 🌙 Light/Dark mode support
+- ⚡️ Fast and efficient performance
+- 🔒 Secure authentication with Spotify
 
-- Real-time lyrics synchronization with Spotify
-- Live translation of lyrics using Google Translate
-- Clean and modern user interface
-- Lyrics caching for better performance
-- Support for multiple translation languages
+## 🚀 Quick Start
 
-## Requirements
+### Installation
 
-- Python 3.11
-- Tkinter (Python GUI library)
-- Spotify account
+#### Option 1: DMG Installer (Recommended)
 
-## Installation
+1. Download the latest `Spotify Lyrics Translator.dmg` from [Releases](https://github.com/mrdevx/spotify-translator/releases)
+2. Open the DMG file
+3. Drag the app to your Applications folder
+4. Launch from Applications or Spotlight
 
-### Download from Releases (Recommended)
+#### Option 2: ZIP Archive
 
-1. Go to the [Releases](https://github.com/MRdevX/spotify-translator/releases) page
-2. Download the latest `SpotifyTranslator.zip`
-3. Unzip the file
-4. Move "Spotify Lyrics Translator.app" to your Applications folder
-5. Right-click the app and select "Open" (required for first launch)
+1. Download the latest `Spotify Lyrics Translator.zip`
+2. Extract the archive
+3. Move the app to Applications folder
+4. Launch the app
 
-### Build from Source
+### First Run Setup
 
-1. Install Python 3.11 and Tkinter:
+1. Launch Spotify and play any song
+2. Open Spotify Lyrics Translator
+3. Log in to your Spotify account when prompted
+4. Select your preferred translation language
+5. Enjoy real-time translated lyrics!
+
+## 🌟 Key Features Explained
+
+### Real-time Lyrics Sync
+
+The app automatically detects the currently playing song on Spotify and fetches its lyrics in real-time, ensuring perfect synchronization with the music.
+
+### Translation Engine
+
+Powered by advanced translation APIs, supporting:
+
+- 100+ languages
+- Accurate translations
+- Context-aware processing
+- Fast response times
+
+### Native Experience
+
+- Seamless macOS integration
+- System notifications
+- Native window management
+- Keyboard shortcuts
+
+## ⚙️ Requirements
+
+- macOS 10.13 or later
+- Spotify Premium account
+- Active internet connection
+- 50MB free disk space
+
+## 🛠️ Development
+
+### Setup Development Environment
 
 ```bash
-brew install python@3.11
-brew install python-tk@3.11
-```
-
-2. Clone the repository and run the application:
-
-```bash
-git clone git@github.com:MRdevX/spotify-translator.git
+# Clone the repository
+git clone https://github.com/mrdevx/spotify-translator.git
 cd spotify-translator
-./run.sh
-```
 
-The script will automatically:
-
-- Create a virtual environment
-- Install dependencies
-- Start the application
-
-### Manual Installation
-
-If you prefer manual installation:
-
-1. Create and activate virtual environment:
-
-```bash
-python3.11 -m venv venv
+# Create virtual environment
+python -m venv venv
 source venv/bin/activate
-```
 
-2. Install dependencies:
-
-```bash
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-3. Run the application:
+### Build from Source
 
 ```bash
-python app.py
+# Build the app
+python build_app.py
+
+# Create DMG
+python create_dmg.py
 ```
 
-## First-time Setup
+## 🤝 Contributing
 
-1. When you first run the application, you'll need to authenticate with Spotify:
+Contributions are welcome! Here's how you can help:
 
-   - Click "Open Spotify" in the authentication dialog
-   - Log in to Spotify if needed
-   - Press F12 to open Developer Tools
-   - Go to Application > Cookies > https://spotify.com
-   - Copy the value of the `sp_dc` cookie
-   - Paste it into the application
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'feat: Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-2. The application will save your authentication for future use
+## 📝 Commit Convention
 
-## Troubleshooting
+We follow the conventional commits specification:
 
-### Authentication Issues
+- `feat:` New features
+- `fix:` Bug fixes
+- `docs:` Documentation changes
+- `style:` Code style changes
+- `refactor:` Code refactoring
+- `test:` Test changes
+- `chore:` Build process or auxiliary tool changes
 
-- Make sure you're logged into Spotify in your browser
-- Try logging out and back into Spotify to get a fresh cookie
-- Verify you copied the entire `sp_dc` cookie value
+## 📜 License
 
-### Display Issues
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-- Ensure Python Tkinter is properly installed
-- Try resetting column widths using the right-click menu
+## 🙏 Acknowledgments
 
-## Cache Management
+- [Spotify](https://spotify.com) for their amazing platform
+- [Syrics](https://github.com/akashrchandran/syrics) for lyrics fetching
+- [Deep Translator](https://github.com/nidhaloff/deep-translator) for translations
+- [Sun Valley TTK Theme](https://github.com/rdbende/Sun-Valley-ttk-theme) for the beautiful UI
 
-The application caches translated lyrics to improve performance. The cache is stored in `lyrics_cache.pkl` and is limited to 1000 entries.
+## 📬 Contact
 
-## Contributing
+Mahdi Rashidi - [@mrdevx](https://github.com/mrdevx)
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Project Link: [https://github.com/mrdevx/spotify-translator](https://github.com/mrdevx/spotify-translator)
 
-## License
+---
 
-MIT License
-
-## Acknowledgments
-
-Special thanks to [@atahanuz](https://github.com/atahanuz) for the original project that inspired this fork.
+<p align="center">
+Made with ❤️ for music lovers
+</p>
