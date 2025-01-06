@@ -8,6 +8,10 @@ on:
       - "version.json"
       - "**.md"
 
+defaults:
+  run:
+    shell: bash -l {0}
+
 jobs:
   version-and-release:
     runs-on: macos-latest
@@ -36,19 +40,20 @@ jobs:
         run: |
           python -m venv venv
           source venv/bin/activate
-          echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
-          echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV
-
-      - name: Install dependencies
-        run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install py2app
+          echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
+          echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV
+
+      - name: Install system dependencies
+        run: |
           brew install python-tk@3.11
 
       - name: Determine version bump
         id: version-bump
         run: |
+          source venv/bin/activate
           # Get commit messages since last tag
           COMMITS=$(git log $(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD --pretty=format:"%s")
           echo "Commit messages:"
@@ -66,6 +71,7 @@ jobs:
       - name: Update version
         id: version
         run: |
+          source venv/bin/activate
           # Run version manager with determined bump type
           python version_manager.py ${{ steps.version-bump.outputs.type }} --no-tag
 
@@ -73,8 +79,10 @@ jobs:
           VERSION=$(python -c "import json; print(json.load(open('version.json'))['major'], json.load(open('version.json'))['minor'], json.load(open('version.json'))['patch'], sep='.')")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Build app
+      - name: Build and package
         run: |
+          source venv/bin/activate
+
           # Clean any previous builds
           rm -rf build dist
 
