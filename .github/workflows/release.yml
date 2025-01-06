@@ -21,6 +21,7 @@ jobs:
       - name: Install system dependencies
         run: |
           brew install create-dmg
+          brew install graphicsmagick
 
       - name: Set up virtual environment
         run: |
@@ -45,15 +46,48 @@ jobs:
           source venv/bin/activate
           python scripts/build_app.py
 
+      - name: Prepare App Icon
+        run: |
+          # Convert icns to png for DMG
+          gm convert assets/app_icon.icns assets/app_icon.png
+          # Create temporary icon for DMG
+          mkdir -p .tmp_icon
+          cp assets/app_icon.icns .tmp_icon/.VolumeIcon.icns
+
+      - name: Sign App Bundle
+        run: |
+          # Create temporary keychain
+          security create-keychain -p github_actions build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p github_actions build.keychain
+
+          # Sign the app bundle
+          codesign --force --deep --sign - "dist/Spotify Lyrics Translator.app"
+
+          # Verify signature
+          codesign --verify --verbose "dist/Spotify Lyrics Translator.app"
+
       - name: Create DMG
         run: |
           source venv/bin/activate
-          python scripts/create_dmg.py
+          # Create DMG with custom icon
+          create-dmg \
+            --volname "Spotify Lyrics Translator" \
+            --volicon ".tmp_icon/.VolumeIcon.icns" \
+            --window-pos 200 120 \
+            --window-size 800 400 \
+            --icon-size 100 \
+            --icon "Spotify Lyrics Translator.app" 200 200 \
+            --hide-extension "Spotify Lyrics Translator.app" \
+            --app-drop-link 600 200 \
+            --no-internet-enable \
+            "dist/Spotify Lyrics Translator.dmg" \
+            "dist/Spotify Lyrics Translator.app"
 
       - name: Package App Bundle
         run: |
           cd dist
-          zip -r "Spotify Lyrics Translator.app.zip" "Spotify Lyrics Translator.app"
+          ditto -c -k --keepParent "Spotify Lyrics Translator.app" "Spotify Lyrics Translator.app.zip"
           cd ..
 
       - name: Get version from tag
@@ -69,7 +103,7 @@ jobs:
           prerelease: false
           files: |
             dist/Spotify Lyrics Translator.app.zip
-            dist/Spotify Lyrics Translator-*.dmg
+            dist/Spotify Lyrics Translator.dmg
           body: |
             # Spotify Lyrics Translator ${{ env.VERSION }}
 
@@ -107,4 +141,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: Spotify Lyrics Translator.dmg
-          path: dist/Spotify Lyrics Translator-*.dmg
+          path: dist/Spotify Lyrics Translator.dmg
