@@ -185,21 +185,10 @@ class SpotifyLyricsTranslator:
             sp_dc = cookie_var.get().strip()
             if sp_dc:
                 try:
-                    # Test the cookie
-                    self.sp = Spotify(sp_dc)
+                    print(f"\n=== Testing cookie authentication ===")
+                    print(f"Cookie length: {len(sp_dc)}")
                     
-                    # Try to get current song to verify authentication
-                    try:
-                        current_song = self.sp.get_current_song()
-                        if current_song:
-                            print("Successfully retrieved current song")
-                        else:
-                            raise Exception("Could not retrieve current song")
-                    except Exception as song_error:
-                        print(f"Error getting current song: {str(song_error)}")
-                        raise Exception(f"Could not verify Spotify connection: {str(song_error)}")
-                    
-                    # Save to config if valid
+                    # Save to config first
                     config_dir = os.path.dirname(CONFIG_FILE)
                     if config_dir:
                         os.makedirs(config_dir, exist_ok=True)
@@ -208,8 +197,30 @@ class SpotifyLyricsTranslator:
                         json.dump({'sp_dc': sp_dc}, f)
                     
                     print("Successfully saved cookie to config file")
+                    
+                    # Create a new instance for testing
+                    test_sp = Spotify(sp_dc)
+                    print("Spotify instance created successfully")
+                    
+                    # Test current song
+                    current_song = test_sp.get_current_song()
+                    if not current_song or not isinstance(current_song, dict):
+                        raise Exception("Could not verify Spotify connection")
+                    
+                    print("Successfully verified connection")
+                    
+                    # Close the dialog first
                     dialog.destroy()
-                    self.initialize_main_gui()
+                    
+                    # Create a fresh instance for the main app
+                    self.sp = Spotify(sp_dc)
+                    
+                    # Initialize the main GUI in a separate thread to avoid EOF issues
+                    def delayed_init():
+                        self.root.after(100, self.initialize_main_gui)
+                    
+                    threading.Thread(target=delayed_init).start()
+                    
                 except Exception as e:
                     error_message = f"""
 Authentication Error
@@ -218,10 +229,14 @@ Please check:
 • You're logged into Spotify in your browser
 • You copied the entire cookie value
 • The cookie is fresh (try logging out and back in)
+• Spotify is currently playing or paused
+• You have Spotify Premium (required for lyrics)
 
 Technical details: {str(e)}
+Error type: {type(e)}
 """
                     print(f"Authentication error: {str(e)}")
+                    print(f"Error type: {type(e)}")
                     messagebox.showerror("Authentication Failed", error_message)
             else:
                 messagebox.showerror("Error", "Please enter the SP_DC cookie value.")
@@ -246,196 +261,208 @@ Technical details: {str(e)}
 
     def initialize_main_gui(self):
         """Initialize the main application GUI"""
-        # Configure the window with app name
-        self.root.title("Spotify Lyrics Translator")
-        self.root.geometry("900x600")
-        self.root.minsize(800, 500)
-        
-        # Apply theme and styles
-        style = ttk.Style(self.root)
-        sv_ttk.set_theme("dark")
-        
-        # Configure custom styles
-        style.configure(
-            "Song.TLabel",
-            font=('Helvetica', 14, 'bold'),
-            foreground='#1DB954'  # Spotify green
-        )
-        style.configure(
-            "Info.TLabel",
-            font=('Helvetica', 10),
-            foreground='#B3B3B3'  # Spotify light gray
-        )
-        
-        # Configure Treeview style with column dividers
-        style.configure(
-            "Treeview",
-            font=('Helvetica', 11),
-            rowheight=30,
-            background='#282828',
-            foreground='#FFFFFF',
-            fieldbackground='#282828',
-            borderwidth=0,  # Remove default borders
-            dividerwidth=2,  # Add custom divider width
-            dividercolor='#404040'  # Divider color
-        )
-        
-        style.configure(
-            "Treeview.Heading",
-            font=('Helvetica', 12, 'bold'),
-            background='#1DB954',
-            foreground='white'
-        )
-        
-        # Configure selection colors
-        style.map(
-            'Treeview',
-            background=[('selected', '#1DB954')],  # Spotify green for selected item
-            foreground=[('selected', 'white')]
-        )
+        try:
+            # Load cache safely
+            self.lyrics_cache = {}  # Initialize empty cache first
+            if os.path.exists(CACHE_FILE) and os.path.getsize(CACHE_FILE) > 0:
+                try:
+                    with open(CACHE_FILE, 'rb') as f:
+                        self.lyrics_cache = pickle.load(f)
+                except (EOFError, pickle.UnpicklingError) as e:
+                    print(f"Error loading cache file: {e}")
+                    # If cache is corrupted, delete it and start fresh
+                    os.remove(CACHE_FILE)
+                    self.lyrics_cache = {}
+            
+            # Configure the window with app name
+            self.root.title("Spotify Lyrics Translator")
+            self.root.geometry("900x600")
+            self.root.minsize(800, 500)
+            
+            # Apply theme and styles
+            style = ttk.Style(self.root)
+            sv_ttk.set_theme("dark")
+            
+            # Configure custom styles
+            style.configure(
+                "Song.TLabel",
+                font=('Helvetica', 14, 'bold'),
+                foreground='#1DB954'  # Spotify green
+            )
+            style.configure(
+                "Info.TLabel",
+                font=('Helvetica', 10),
+                foreground='#B3B3B3'  # Spotify light gray
+            )
+            
+            # Configure Treeview style with column dividers
+            style.configure(
+                "Treeview",
+                font=('Helvetica', 11),
+                rowheight=30,
+                background='#282828',
+                foreground='#FFFFFF',
+                fieldbackground='#282828',
+                borderwidth=0,  # Remove default borders
+                dividerwidth=2,  # Add custom divider width
+                dividercolor='#404040'  # Divider color
+            )
+            
+            style.configure(
+                "Treeview.Heading",
+                font=('Helvetica', 12, 'bold'),
+                background='#1DB954',
+                foreground='white'
+            )
+            
+            # Configure selection colors
+            style.map(
+                'Treeview',
+                background=[('selected', '#1DB954')],  # Spotify green for selected item
+                foreground=[('selected', 'white')]
+            )
 
-        # Create tooltip
-        self.tooltip = None
-        
-        # Create right-click menu for column management
-        self.column_menu = tk.Menu(self.root, tearoff=0)
-        self.column_menu.add_command(label="Reset Column Widths", command=self.reset_column_widths)
-        
-        # Main container with animation frame
-        self.animation_frame = ttk.Frame(self.root)
-        self.animation_frame.pack(fill=tk.BOTH, expand=True)
-        
-        main_container = ttk.Frame(self.animation_frame, padding="10")
-        main_container.pack(fill=tk.BOTH, expand=True)
-        
-        # Song info frame
-        song_info_frame = ttk.Frame(main_container)
-        song_info_frame.pack(fill=tk.X, pady=(0, 10))
-        
-        # Left side: Song info
-        song_details_frame = ttk.Frame(song_info_frame)
-        song_details_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        
-        # Song title and artist
-        self.song_label = ttk.Label(
-            song_details_frame,
-            text="Loading...",
-            style="Song.TLabel"
-        )
-        self.song_label.pack(anchor='w')
-        
-        # Album name
-        self.album_label = ttk.Label(
-            song_details_frame,
-            text="",
-            style="Info.TLabel"
-        )
-        self.album_label.pack(anchor='w')
-        
-        # Right side: Time info
-        time_frame = ttk.Frame(song_info_frame)
-        time_frame.pack(side=tk.RIGHT, padx=(10, 0))
-        
-        # Current/Total time
-        self.time_label = ttk.Label(
-            time_frame,
-            text="0:00 / 0:00",
-            style="Info.TLabel"
-        )
-        self.time_label.pack(anchor='e')
-        
-        # Progress bar
-        self.progress_var = tk.DoubleVar()
-        self.progress_bar = ttk.Progressbar(
-            main_container,
-            variable=self.progress_var,
-            mode='determinate',
-            style="Spotify.Horizontal.TProgressbar"
-        )
-        self.progress_bar.pack(fill=tk.X, pady=(0, 10))
-        
-        # Configure progress bar style
-        style.configure(
-            "Spotify.Horizontal.TProgressbar",
-            troughcolor='#404040',
-            background='#1DB954',
-            darkcolor='#1DB954',
-            lightcolor='#1DB954'
-        )
+            # Create tooltip
+            self.tooltip = None
+            
+            # Create right-click menu for column management
+            self.column_menu = tk.Menu(self.root, tearoff=0)
+            self.column_menu.add_command(label="Reset Column Widths", command=self.reset_column_widths)
+            
+            # Main container with animation frame
+            self.animation_frame = ttk.Frame(self.root)
+            self.animation_frame.pack(fill=tk.BOTH, expand=True)
+            
+            main_container = ttk.Frame(self.animation_frame, padding="10")
+            main_container.pack(fill=tk.BOTH, expand=True)
+            
+            # Song info frame
+            song_info_frame = ttk.Frame(main_container)
+            song_info_frame.pack(fill=tk.X, pady=(0, 10))
+            
+            # Left side: Song info
+            song_details_frame = ttk.Frame(song_info_frame)
+            song_details_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
+            
+            # Song title and artist
+            self.song_label = ttk.Label(
+                song_details_frame,
+                text="Loading...",
+                style="Song.TLabel"
+            )
+            self.song_label.pack(anchor='w')
+            
+            # Album name
+            self.album_label = ttk.Label(
+                song_details_frame,
+                text="",
+                style="Info.TLabel"
+            )
+            self.album_label.pack(anchor='w')
+            
+            # Right side: Time info
+            time_frame = ttk.Frame(song_info_frame)
+            time_frame.pack(side=tk.RIGHT, padx=(10, 0))
+            
+            # Current/Total time
+            self.time_label = ttk.Label(
+                time_frame,
+                text="0:00 / 0:00",
+                style="Info.TLabel"
+            )
+            self.time_label.pack(anchor='e')
+            
+            # Progress bar
+            self.progress_var = tk.DoubleVar()
+            self.progress_bar = ttk.Progressbar(
+                main_container,
+                variable=self.progress_var,
+                mode='determinate',
+                style="Spotify.Horizontal.TProgressbar"
+            )
+            self.progress_bar.pack(fill=tk.X, pady=(0, 10))
+            
+            # Configure progress bar style
+            style.configure(
+                "Spotify.Horizontal.TProgressbar",
+                troughcolor='#404040',
+                background='#1DB954',
+                darkcolor='#1DB954',
+                lightcolor='#1DB954'
+            )
 
-        # Create frame for Treeview and Scrollbar
-        tree_frame = ttk.Frame(main_container)
-        tree_frame.pack(fill=tk.BOTH, expand=True)
-        
-        # Create and configure Treeview
-        self.tree = ttk.Treeview(
-            tree_frame,
-            columns=("Time", "Original Lyrics", "Translated Lyrics"),
-            show="headings",
-            style="Treeview"
-        )
-        
-        # Enable column resizing
-        for col in ("Time", "Original Lyrics", "Translated Lyrics"):
-            self.tree.heading(col, text=col, anchor='w')
-            self.tree.column(col, stretch=True)  # Allow column stretching
-        
-        # Store original column widths
-        self.default_widths = {
-            "Time": 60,
-            "Original Lyrics": 350,
-            "Translated Lyrics": 350
-        }
-        
-        # Add scrollbar
-        scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=self.tree.yview)
-        self.tree.configure(yscrollcommand=scrollbar.set)
-        
-        # Pack Treeview and Scrollbar
-        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        # Bind events AFTER creating the methods
-        self.tree.bind('<Motion>', self.show_tooltip)
-        self.tree.bind('<Leave>', self.hide_tooltip)
-        self.tree.bind('<Button-3>', self.show_column_menu)  # Right-click menu
-        
-        # Status bar
-        self.status_bar = ttk.Label(
-            main_container,
-            text="Ready",
-            font=('Helvetica', 10),
-            anchor='w'
-        )
-        self.status_bar.pack(fill=tk.X, pady=(10, 0))
-        
-        # Initialize other variables
-        self.current_song_id = None
-        self.translation_complete = False
-        self.translated_lyrics_cache = None
-        self.language = ""
-        
-        # Load cache
-        if os.path.exists(CACHE_FILE):
-            with open(CACHE_FILE, 'rb') as f:
-                self.lyrics_cache = pickle.load(f)
-        else:
-            self.lyrics_cache = {}
-        
-        # Start update loop
-        self.root.after(500, self.update_display)
+            # Create frame for Treeview and Scrollbar
+            tree_frame = ttk.Frame(main_container)
+            tree_frame.pack(fill=tk.BOTH, expand=True)
+            
+            # Create and configure Treeview
+            self.tree = ttk.Treeview(
+                tree_frame,
+                columns=("Time", "Original Lyrics", "Translated Lyrics"),
+                show="headings",
+                style="Treeview"
+            )
+            
+            # Enable column resizing
+            for col in ("Time", "Original Lyrics", "Translated Lyrics"):
+                self.tree.heading(col, text=col, anchor='w')
+                self.tree.column(col, stretch=True)  # Allow column stretching
+            
+            # Store original column widths
+            self.default_widths = {
+                "Time": 60,
+                "Original Lyrics": 350,
+                "Translated Lyrics": 350
+            }
+            
+            # Add scrollbar
+            scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=self.tree.yview)
+            self.tree.configure(yscrollcommand=scrollbar.set)
+            
+            # Pack Treeview and Scrollbar
+            self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            
+            # Bind events AFTER creating the methods
+            self.tree.bind('<Motion>', self.show_tooltip)
+            self.tree.bind('<Leave>', self.hide_tooltip)
+            self.tree.bind('<Button-3>', self.show_column_menu)  # Right-click menu
+            
+            # Status bar
+            self.status_bar = ttk.Label(
+                main_container,
+                text="Ready",
+                font=('Helvetica', 10),
+                anchor='w'
+            )
+            self.status_bar.pack(fill=tk.X, pady=(10, 0))
+            
+            # Initialize other variables
+            self.current_song_id = None
+            self.translation_complete = False
+            self.translated_lyrics_cache = None
+            self.language = ""
+            
+            # Start update loop
+            self.root.after(500, self.update_display)
 
-        # Bind resize event
-        self.root.bind('<Configure>', self.on_window_resize)
+            # Bind resize event
+            self.root.bind('<Configure>', self.on_window_resize)
 
-        # Create main menu bar
-        menubar = tk.Menu(self.root)
-        self.root.config(menu=menubar)
-        
-        # Help menu
-        help_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Help", menu=help_menu)
-        help_menu.add_command(label="About", command=self.show_about_dialog)
+            # Create main menu bar
+            menubar = tk.Menu(self.root)
+            self.root.config(menu=menubar)
+            
+            # Help menu
+            help_menu = tk.Menu(menubar, tearoff=0)
+            menubar.add_cascade(label="Help", menu=help_menu)
+            help_menu.add_command(label="About", command=self.show_about_dialog)
+
+        except Exception as e:
+            print(f"\n=== Error in initialize_main_gui ===")
+            print(f"Error type: {type(e)}")
+            print(f"Error message: {str(e)}")
+            print(f"Error details: {e.__dict__ if hasattr(e, '__dict__') else 'No additional details'}")
 
     def save_cache(self):
         with open(CACHE_FILE, 'wb') as f:
@@ -536,35 +563,97 @@ Technical details: {str(e)}
         self.translation_complete = True
 
     def update_lyrics(self):
-        current_song = self.sp.get_current_song()
-        song_id = current_song['item']['id']
-        song_name = current_song['item']['name']
-        artist_name = current_song['item']['artists'][0]['name']
-        lyrics = self.sp.get_lyrics(song_id)
-        lyrics_data = lyrics['lyrics']['lines'] if lyrics and 'lyrics' in lyrics and 'lines' in lyrics['lyrics'] else None
+        try:
+            print("\n=== Starting lyrics update process ===")
+            current_song = self.sp.get_current_song()
+            print(f"Current song data retrieved: {bool(current_song)}")
+            
+            if not current_song or 'item' not in current_song:
+                print("No valid current song data")
+                self.tree.delete(*self.tree.get_children())
+                self.tree.insert("", "end", values=("0:00", "(No song playing)", ""))
+                return
+            
+            song_id = current_song['item']['id']
+            song_name = current_song['item']['name']
+            artist_name = current_song['item']['artists'][0]['name']
+            print(f"Song details - ID: {song_id}, Name: {song_name}, Artist: {artist_name}")
+            
+            print("Attempting to fetch lyrics...")
+            try:
+                lyrics = self.sp.get_lyrics(song_id)
+                if not lyrics:
+                    print("No lyrics returned from Spotify")
+                    self.tree.delete(*self.tree.get_children())
+                    self.tree.insert("", "end", values=("0:00", "(No lyrics available)", ""))
+                    return
+                print(f"Raw lyrics response type: {type(lyrics)}")
+                print(f"Raw lyrics response keys: {lyrics.keys() if isinstance(lyrics, dict) else 'Not a dictionary'}")
+            except Exception as lyrics_error:
+                print(f"Error fetching lyrics: {str(lyrics_error)}")
+                print(f"Error type: {type(lyrics_error)}")
+                print(f"Error details: {lyrics_error.__dict__ if hasattr(lyrics_error, '__dict__') else 'No additional details'}")
+                self.tree.delete(*self.tree.get_children())
+                self.tree.insert("", "end", values=("0:00", f"(Error: {str(lyrics_error)})", ""))
+                return
+            
+            print("Processing lyrics data...")
+            if not isinstance(lyrics, dict) or 'lyrics' not in lyrics:
+                print("Invalid lyrics format - missing 'lyrics' key")
+                self.tree.delete(*self.tree.get_children())
+                self.tree.insert("", "end", values=("0:00", "(Invalid lyrics format)", ""))
+                return
+                
+            if not isinstance(lyrics['lyrics'], dict) or 'lines' not in lyrics['lyrics']:
+                print("Invalid lyrics format - missing 'lines' key")
+                self.tree.delete(*self.tree.get_children())
+                self.tree.insert("", "end", values=("0:00", "(Invalid lyrics format)", ""))
+                return
+                
+            lyrics_data = lyrics['lyrics']['lines']
+            print(f"Lyrics data extracted: {bool(lyrics_data)}")
 
-        # Update song label with current song info
-        song_display = f"{song_name} - {artist_name}"
-        self.song_label.config(text=song_display)
-        
-        self.tree.delete(*self.tree.get_children())
+            # Update song label with current song info
+            song_display = f"{song_name} - {artist_name}"
+            self.song_label.config(text=song_display)
+            
+            self.tree.delete(*self.tree.get_children())
 
-        if lyrics_data:
-            detected_lang = lyrics['lyrics']['language']
-            self.language = detected_lang
-            self.tree.heading("Original Lyrics", text=f"Original Lyrics ({detected_lang})")
+            if lyrics_data:
+                print(f"Number of lyric lines: {len(lyrics_data)}")
+                detected_lang = lyrics['lyrics'].get('language', 'unknown')
+                self.language = detected_lang
+                print(f"Detected language: {detected_lang}")
+                
+                self.tree.heading("Original Lyrics", text=f"Original Lyrics ({detected_lang})")
 
-            for lyric in lyrics_data:
-                self.tree.insert("", "end", values=(self.ms_to_min_sec(lyric['startTimeMs']), lyric['words'], ""))
-            self.translation_complete = False
-            if song_id in self.lyrics_cache:
-                self.update_translations(self.lyrics_cache[song_id])
+                for lyric in lyrics_data:
+                    if not isinstance(lyric, dict) or 'startTimeMs' not in lyric or 'words' not in lyric:
+                        print(f"Invalid lyric format: {lyric}")
+                        continue
+                    self.tree.insert("", "end", values=(self.ms_to_min_sec(lyric['startTimeMs']), lyric['words'], ""))
+                
+                self.translation_complete = False
+                if song_id in self.lyrics_cache:
+                    print("Using cached translations")
+                    self.update_translations(self.lyrics_cache[song_id])
+                else:
+                    print("Starting translation process")
+                    threading.Thread(target=self.translate_words, 
+                                  args=(lyrics_data, song_name, song_id, self.update_translations)).start()
             else:
-                threading.Thread(target=self.translate_words, 
-                              args=(lyrics_data, song_name, song_id, self.update_translations)).start()
-        else:
-            self.tree.insert("", "end", values=("0:00", "(No lyrics available)", ""))
-        self.adjust_column_widths()
+                print("No lyrics data available")
+                self.tree.insert("", "end", values=("0:00", "(No lyrics available)", ""))
+            
+            self.adjust_column_widths()
+            
+        except Exception as e:
+            print(f"\n=== Error in update_lyrics ===")
+            print(f"Error type: {type(e)}")
+            print(f"Error message: {str(e)}")
+            print(f"Error details: {e.__dict__ if hasattr(e, '__dict__') else 'No additional details'}")
+            self.tree.delete(*self.tree.get_children())
+            self.tree.insert("", "end", values=("0:00", f"(Error: {str(e)})", ""))
 
     def update_translations(self, translated_lyrics):
         for item in self.tree.get_children():
