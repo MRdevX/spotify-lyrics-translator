@@ -6,7 +6,7 @@
 ![macOS](https://img.shields.io/badge/macOS-10.13%2B-blue)
 
 <p align="center">
-  <img src="app_icon.icns" alt="Spotify Lyrics Translator Logo" width="200">
+  <img src="assets/app_icon.icns" alt="Spotify Lyrics Translator Logo" width="200">
 </p>
 
 > 🌍 Real-time translation of Spotify lyrics in a beautiful, native macOS app
@@ -76,8 +76,30 @@ Powered by advanced translation APIs, supporting:
 - Spotify Premium account
 - Active internet connection
 - 50MB free disk space
+- Python 3.8 or later (for development)
 
 ## 🛠️ Development
+
+### Project Structure
+
+```
+spotify-translator/
+├── assets/                 # Application assets
+│   └── app_icon.icns      # App icon
+├── scripts/               # Build and utility scripts
+│   ├── build_app.py      # Main build script
+│   ├── build_dmg.py      # DMG creation orchestrator
+│   ├── create_dmg.py     # DMG creation utility
+│   └── setup.py          # py2app configuration
+├── src/                   # Source code
+│   ├── config/           # Configuration files
+│   ├── gui/              # GUI components
+│   ├── utils/            # Utility modules
+│   └── main.py           # Application entry point
+├── requirements.txt       # Python dependencies
+├── version.json          # Version information
+└── README.md             # Project documentation
+```
 
 ### Setup Development Environment
 
@@ -94,15 +116,52 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Build from Source
+### Build Process
+
+The project includes several build scripts in the `scripts` directory:
+
+#### Development Build
 
 ```bash
-# Build the app
-python build_app.py
-
-# Create DMG
-python create_dmg.py
+# Create development build (alias mode)
+python scripts/build_app.py
 ```
+
+This creates a development build that links to your source files, making it easier to test changes.
+
+#### Production Build
+
+```bash
+# Create production build and DMG installer
+python scripts/build_dmg.py
+```
+
+This script:
+
+1. Cleans previous builds
+2. Verifies the environment
+3. Installs requirements
+4. Creates a standalone app bundle
+5. Packages the app into a DMG installer
+
+#### Build Scripts
+
+- `build_app.py`: Creates the macOS application bundle using py2app
+
+  - Verifies development environment
+  - Manages dependencies
+  - Handles both Intel and Apple Silicon builds
+  - Validates the app bundle structure
+
+- `build_dmg.py`: Orchestrates the complete build process
+
+  - Coordinates between build_app.py and create_dmg.py
+  - Ensures all steps complete successfully
+
+- `create_dmg.py`: Creates the DMG installer
+  - Packages the app for distribution
+  - Creates a professional installer with custom background
+  - Includes Applications folder shortcut
 
 ## 🤝 Contributing
 
