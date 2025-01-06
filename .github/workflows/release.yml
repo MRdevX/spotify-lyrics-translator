@@ -41,18 +41,42 @@ jobs:
           ls -la src/config/
 
       - name: Setup Code Signing
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_APPLICATION_CER }}
+          CERTIFICATE_KEY_BASE64: ${{ secrets.DEVELOPER_ID_APPLICATION_KEY }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
-          # Create temporary keychain
-          security create-keychain -p github_actions build.keychain
-          security default-keychain -s build.keychain
-          security unlock-keychain -p github_actions build.keychain
-          security set-keychain-settings -t 3600 -l ~/Library/Keychains/build.keychain
+          # Create certificate files from secrets
+          echo "$CERTIFICATE_BASE64" | base64 --decode > certificate.cer
+          echo "$CERTIFICATE_KEY_BASE64" | base64 --decode > certificate.key
 
-          # Create ad-hoc signing identity
-          security add-generic-password -A -s "Spotify Lyrics Translator Dev" -a "com.mrdevx.spotifylyricsapp" build.keychain
+          # Create p12 file
+          openssl pkcs12 -export -name "Developer ID Application" \
+            -in certificate.cer \
+            -inkey certificate.key \
+            -out certificate.p12 \
+            -passout pass:"$P12_PASSWORD"
+
+          # Configure Keychain
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # Import certificate to keychain
+          security import certificate.p12 \
+            -P "$P12_PASSWORD" \
+            -A \
+            -t cert \
+            -f pkcs12 \
+            -k $KEYCHAIN_PATH
+
+          # Add keychain to search list
+          security list-keychains -d user -s $KEYCHAIN_PATH
 
           # Allow codesign to access the keychain
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k github_actions build.keychain
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
 
       - name: Build App
         run: |
@@ -62,22 +86,50 @@ jobs:
           python3 scripts/build_app.py
 
       - name: Sign App Bundle
+        env:
+          DEVELOPER_ID: ${{ secrets.DEVELOPER_ID_APPLICATION_NAME }}
         run: |
           # Sign frameworks and libraries
-          find "dist/Spotify Lyrics Translator.app/Contents/Frameworks" -type f -name "*.so" -o -name "*.dylib" | while read lib; do
-            codesign --force --sign - --deep --preserve-metadata=identifier,entitlements,flags --timestamp "$lib"
+          find "dist/Spotify Lyrics Translator.app" -type f \( -name "*.so" -o -name "*.dylib" \) | while read lib; do
+            codesign --force --sign "$DEVELOPER_ID" \
+              --options runtime \
+              --timestamp \
+              --entitlements "entitlements.plist" \
+              "$lib"
           done
 
-          # Sign Python.framework if it exists
+          # Sign Python.framework
           if [ -d "dist/Spotify Lyrics Translator.app/Contents/Frameworks/Python.framework" ]; then
-            codesign --force --sign - --deep --preserve-metadata=identifier,entitlements,flags --timestamp "dist/Spotify Lyrics Translator.app/Contents/Frameworks/Python.framework"
+            codesign --force --sign "$DEVELOPER_ID" \
+              --options runtime \
+              --timestamp \
+              --entitlements "entitlements.plist" \
+              "dist/Spotify Lyrics Translator.app/Contents/Frameworks/Python.framework"
           fi
 
           # Sign the main app bundle
-          codesign --force --sign - --deep --preserve-metadata=identifier,entitlements,flags --timestamp "dist/Spotify Lyrics Translator.app"
+          codesign --force --sign "$DEVELOPER_ID" \
+            --options runtime \
+            --timestamp \
+            --entitlements "entitlements.plist" \
+            "dist/Spotify Lyrics Translator.app"
 
           # Verify signature
           codesign --verify --verbose=4 "dist/Spotify Lyrics Translator.app"
+
+      - name: Notarize App
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        uses: lando/notarize-action@v2
+        with:
+          product-path: "dist/Spotify Lyrics Translator.app"
+          appstore-connect-username: ${{ secrets.APPLE_ACCOUNT_USERNAME }}
+          appstore-connect-password: ${{ secrets.APPLE_ACCOUNT_PASSWORD }}
+          appstore-connect-team-id: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Staple App
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        run: |
+          xcrun stapler staple "dist/Spotify Lyrics Translator.app"
 
       - name: Prepare App Icon
         run: |
@@ -99,6 +151,29 @@ jobs:
             --no-internet-enable \
             "dist/Spotify Lyrics Translator.dmg" \
             "dist/Spotify Lyrics Translator.app"
+
+      - name: Sign DMG
+        env:
+          DEVELOPER_ID: ${{ secrets.DEVELOPER_ID_APPLICATION_NAME }}
+        run: |
+          codesign --force --sign "$DEVELOPER_ID" \
+            --options runtime \
+            --timestamp \
+            "dist/Spotify Lyrics Translator.dmg"
+
+      - name: Notarize DMG
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        uses: lando/notarize-action@v2
+        with:
+          product-path: "dist/Spotify Lyrics Translator.dmg"
+          appstore-connect-username: ${{ secrets.APPLE_ACCOUNT_USERNAME }}
+          appstore-connect-password: ${{ secrets.APPLE_ACCOUNT_PASSWORD }}
+          appstore-connect-team-id: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Staple DMG
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        run: |
+          xcrun stapler staple "dist/Spotify Lyrics Translator.dmg"
 
       - name: Package App Bundle
         run: |
