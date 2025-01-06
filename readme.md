@@ -1,146 +1,103 @@
 # Spotify Lyrics Translator
 
-Display translated lyrics of the currently playing Spotify track in real-time, with an easy-to-use interface!
+A desktop application that shows real-time translations of Spotify lyrics while you listen to music.
 
 ## Features
+
 - Real-time lyrics synchronization with Spotify
-- Automatic language detection and translation to English
-- Clean, modern interface
-- Caching system for faster loading of previously translated songs
-- Simple one-click installation
+- Live translation of lyrics using Google Translate
+- Clean and modern user interface
+- Lyrics caching for better performance
+- Support for multiple translation languages
+
+## Requirements
+
+- Python 3.11
+- Tkinter (Python GUI library)
+- Spotify account
 
 ## Installation
 
-### System Requirements
+### macOS
 
-#### Python Version
-- Python 3.11 required
+1. Install Python 3.11 and Tkinter:
 
-#### macOS
 ```bash
-# Install Python 3.11
 brew install python@3.11
-
-# Install Tkinter
 brew install python-tk@3.11
+```
 
-# Create and activate virtual environment
+2. Clone the repository and run the application:
+
+```bash
+git clone [your-repo-url]
+cd spotify-translator
+./run.sh
+```
+
+The script will automatically:
+
+- Create a virtual environment
+- Install dependencies
+- Start the application
+
+### Manual Installation
+
+If you prefer manual installation:
+
+1. Create and activate virtual environment:
+
+```bash
 python3.11 -m venv venv
 source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
 ```
 
-#### Ubuntu/Debian
-```bash
-sudo apt-get install python3-tk
-```
+2. Install dependencies:
 
-#### Fedora
-```bash
-sudo dnf install python3-tkinter
-```
-
-### For Users
-1. Download the latest release from the [Releases](https://github.com/yourusername/spotify-lyrics-translator/releases) page
-2. Run the SpotifyLyricsTranslator executable
-3. Follow the in-app instructions to authenticate with Spotify
-
-### For Developers
-
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/spotify-lyrics-translator.git
-cd spotify-lyrics-translator
-```
-
-2. Create and activate a virtual environment:
-
-Windows:
-```bash
-python -m venv venv
-venv\Scripts\activate
-```
-
-macOS/Linux:
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-3. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Run the application:
+3. Run the application:
+
 ```bash
 python app.py
 ```
 
-## First-Time Setup
+## First-time Setup
 
-1. Launch the application
-2. Click the "Open Spotify" button in the authentication dialog
-3. Log in to Spotify if needed
-4. Press F12 to open Developer Tools
-5. Go to Application > Cookies > https://spotify.com
-6. Find 'sp_dc' cookie and copy its value
-7. Paste the value in the application's login dialog
+1. When you first run the application, you'll need to authenticate with Spotify:
 
-The app will remember your authentication for future uses.
+   - Click "Open Spotify" in the authentication dialog
+   - Log in to Spotify if needed
+   - Press F12 to open Developer Tools
+   - Go to Application > Cookies > https://spotify.com
+   - Copy the value of the `sp_dc` cookie
+   - Paste it into the application
 
-## Screenshots
-
-<table>
-  <tr>
-    <td style="text-align: center;">
-      <p>Spotify's Native Lyrics Display</p>
-      <img src="https://i.imgur.com/7PoYKzL.png" alt="Native lyrics display of Spotify" style="width: 100%;" />
-    </td>
-    <td style="text-align: center;">
-      <p>Translated Lyrics Display on the App</p>
-      <img src="https://i.imgur.com/IY6v5y8.png" alt="The app with translation" style="width: 91%;" />
-    </td>
-  </tr>
-</table>
-
-## How It Works
-
-The program uses the Google Translate API to translate lyrics from any language to English. It maintains a cache of the last 1000 translated songs to improve performance. The cache is stored in your user directory and persists between sessions.
+2. The application will save your authentication for future use
 
 ## Troubleshooting
 
-### Common Issues
+### Authentication Issues
 
-1. **Authentication Error**
-   - Make sure you're logged into Spotify in your browser
-   - Verify that you copied the correct cookie value
-   - Try logging out and back into Spotify
+- Make sure you're logged into Spotify in your browser
+- Try logging out and back into Spotify to get a fresh cookie
+- Verify you copied the entire `sp_dc` cookie value
 
-2. **No Lyrics Showing**
-   - Ensure the current song has lyrics available on Spotify
-   - Check your internet connection
+### Display Issues
 
-3. **Translation Not Working**
-   - Check your internet connection
-   - Try restarting the application
+- Ensure Python Tkinter is properly installed
+- Try resetting column widths using the right-click menu
+
+## Cache Management
+
+The application caches translated lyrics to improve performance. The cache is stored in `lyrics_cache.pkl` and is limited to 1000 entries.
 
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## Thanks
-
-Thanks to @akashrchandran for his Spotify Lyrics API which made this app possible: https://github.com/akashrchandran/syrics
-
-## Contact
-
-For bug reports and feature requests, please [open an issue](https://github.com/yourusername/spotify-lyrics-translator/issues) on GitHub.
-
-For other inquiries, you can reach me at atahanuz23@gmail.com.
-
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+[Your License]
