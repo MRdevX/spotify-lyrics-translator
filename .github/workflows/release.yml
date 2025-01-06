@@ -31,7 +31,7 @@ jobs:
     runs-on: macos-latest
     permissions:
       contents: write
-    if: "!contains(github.event.head_commit.message, 'chore: bump version')"
+    if: ${{ !contains(github.event.head_commit.message, 'chore: bump version') }}
 
     steps:
       - name: Checkout code
@@ -51,24 +51,44 @@ jobs:
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
 
+      - name: Install system dependencies
+        run: |
+          brew install python-tk@3.11
+          brew install create-dmg
+
       - name: Set up virtual environment
         run: |
           python -m venv venv
           source venv/bin/activate
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install py2app
-          echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
-          echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV
+          python -m pip install --upgrade pip setuptools wheel
 
-      - name: Install system dependencies
+      - name: Install Python dependencies
         run: |
-          brew install python-tk@3.11
+          source venv/bin/activate
+          # Install core dependencies first
+          pip install \
+            Pillow==10.2.0 \
+            beautifulsoup4==4.12.3 \
+            certifi==2024.12.14 \
+            requests==2.31.0 \
+            urllib3==2.0.7 \
+            charset-normalizer==3.3.2 \
+            idna==3.6 \
+            soupsieve==2.5 \
+            spotipy==2.23.0 \
+            tqdm==4.66.1 \
+            tinytag==1.9.0 \
+            redis==5.0.1 \
+            deep-translator==1.11.4 \
+            syrics==0.4.5 \
+            sv-ttk==2.5.5 \
+            py2app==0.28.6
 
       - name: Determine version bump
         id: version-bump
         if: github.event.inputs.version_type == '' || github.event.inputs.version_type == 'auto'
         run: |
+          source venv/bin/activate
           # Get commit messages since last tag
           COMMITS=$(git log $(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD --pretty=format:"%s")
           echo "Commit messages:"
@@ -107,12 +127,12 @@ jobs:
       - name: Generate release notes
         id: release-notes
         run: |
+          source venv/bin/activate
           # Get the previous tag
           PREV_TAG=$(git describe --tags --abbrev=0 "HEAD^" 2>/dev/null || echo "")
 
           # Start collecting release notes
           echo "NOTES<<EOF" >> $GITHUB_OUTPUT
-
           echo "## What's Changed" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
 
@@ -146,7 +166,6 @@ jobs:
 
           echo "" >> $GITHUB_OUTPUT
           echo "**Full Changelog**: https://github.com/${{ github.repository }}/commits/${{ github.sha }}" >> $GITHUB_OUTPUT
-
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Build and package
@@ -159,14 +178,28 @@ jobs:
           # Build the app
           python build_app.py
 
+          # Ensure dist directory exists
+          if [ ! -d "dist" ]; then
+            echo "Error: dist directory not found after build"
+            exit 1
+          fi
+
           # Create distribution files
           cd dist
+          if [ ! -d "Spotify Lyrics Translator.app" ]; then
+            echo "Error: App bundle not found"
+            exit 1
+          fi
 
           # Create ZIP archive
           zip -r "Spotify Lyrics Translator-${{ steps.version.outputs.version }}.zip" "Spotify Lyrics Translator.app"
 
           # Create DMG
           cd ..
+          if [ ! -f "create_dmg.py" ]; then
+            echo "Error: create_dmg.py not found"
+            exit 1
+          fi
           python create_dmg.py
 
       - name: Commit version changes
