@@ -50,6 +50,12 @@ jobs:
           source venv/bin/activate
           python scripts/create_dmg.py
 
+      - name: Package App Bundle
+        run: |
+          cd dist
+          zip -r "Spotify Lyrics Translator.app.zip" "Spotify Lyrics Translator.app"
+          cd ..
+
       - name: Get version from tag
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
@@ -62,7 +68,7 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            dist/Spotify Lyrics Translator.app/**/*
+            dist/Spotify Lyrics Translator.app.zip
             dist/Spotify Lyrics Translator-*.dmg
           body: |
             # Spotify Lyrics Translator ${{ env.VERSION }}
@@ -95,7 +101,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: Spotify Lyrics Translator.app
-          path: dist/Spotify Lyrics Translator.app
+          path: dist/Spotify Lyrics Translator.app.zip
 
       - name: Upload DMG
         uses: actions/upload-artifact@v3
