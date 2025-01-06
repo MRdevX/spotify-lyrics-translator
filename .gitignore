@@ -1,0 +1,5 @@
+lyrics_cache.pkl
+*.pkl
+venv/
+config.json
+*.json

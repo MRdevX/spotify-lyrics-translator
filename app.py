@@ -1,20 +1,64 @@
+import sys
+
+# Check Python version before anything else
+if not (sys.version_info.major == 3 and sys.version_info.minor == 11):
+    print("""
+Error: This application requires Python 3.11
+
+Please install Python 3.11 and set up the environment:
+
+macOS:
+    brew install python@3.11
+    brew install python-tk@3.11
+    python3.11 -m venv venv
+    source venv/bin/activate
+    pip install -r requirements.txt
+
+Then run the application again.
+    """)
+    sys.exit(1)
+
 try:
     import tkinter as tk
     from tkinter import ttk, messagebox
+    
+    # Check Tk version
+    root = tk.Tk()
+    tk_version = root.tk.call('info', 'patchlevel')
+    root.destroy()
+    
+    if tk_version.startswith('9'):
+        print("""
+Warning: Incompatible Tk version detected (9.x)
+Please install Tk 8.6 with Python 3.11:
+
+macOS:
+    brew install python@3.11
+    brew install python-tk@3.11
+    python3.11 -m venv venv
+    source venv/bin/activate
+    pip install -r requirements.txt
+
+Ubuntu/Debian:
+    sudo apt-get install python3.11-tk
+        """)
+        exit(1)
+        
 except ImportError:
     print("""
 Error: Tkinter is not installed!
 
-Please install tkinter for your system:
+Please install Python 3.11 and Tkinter:
 
 macOS:
-    brew install python-tk
+    brew install python@3.11
+    brew install python-tk@3.11
 
 Ubuntu/Debian:
-    sudo apt-get install python3-tk
+    sudo apt-get install python3.11-tk
 
 Fedora:
-    sudo dnf install python3-tkinter
+    sudo dnf install python3.11-tkinter
     """)
     exit(1)
 

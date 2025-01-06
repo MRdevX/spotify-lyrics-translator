@@ -1,6 +1,7 @@
 deep-translator==1.11.4
 syrics
 sv-ttk==2.5.5
-pyinstaller>=6.11.0
+pyinstaller==6.11.0
 # System Requirements:
-# - Python Tkinter (on macOS: brew install python-tk) 
+# - Python 3.11 required
+# - Python Tkinter (on macOS: brew install python-tk@3.11) 

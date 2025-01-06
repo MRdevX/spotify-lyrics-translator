@@ -13,9 +13,23 @@ Display translated lyrics of the currently playing Spotify track in real-time, w
 
 ### System Requirements
 
+#### Python Version
+- Python 3.11 required
+
 #### macOS
 ```bash
-brew install python-tk
+# Install Python 3.11
+brew install python@3.11
+
+# Install Tkinter
+brew install python-tk@3.11
+
+# Create and activate virtual environment
+python3.11 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
 ```
 
 #### Ubuntu/Debian
