@@ -11,6 +11,8 @@
 
 > 🌍 Real-time translation of Spotify lyrics in a beautiful, native macOS app
 
+This project is a fork of [spotify-translator](https://github.com/atahanuz/spotify-translator) by [@atahanuz](https://github.com/atahanuz), enhanced with native macOS integration and additional features. Special thanks to Atahan Uz (atahanuz23@gmail.com) for creating the original project that made this possible!
+
 ## ✨ Features
 
 - 🔄 Real-time lyrics synchronization with Spotify
@@ -130,6 +132,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
+- [@atahanuz](https://github.com/atahanuz) for the original [spotify-translator](https://github.com/atahanuz/spotify-translator) project
 - [Spotify](https://spotify.com) for their amazing platform
 - [Syrics](https://github.com/akashrchandran/syrics) for lyrics fetching
 - [Deep Translator](https://github.com/nidhaloff/deep-translator) for translations
