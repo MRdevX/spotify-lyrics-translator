@@ -1,0 +1,4 @@
+deep-translator
+syrics-api
+sv-ttk
+pyinstaller 

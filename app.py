@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from deep_translator import GoogleTranslator
 from syrics.api import Spotify
 import threading
@@ -7,9 +7,90 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import pickle
 import os
 import sv_ttk
+import webbrowser
+import json
 
-# Initialize Spotify API
-sp = Spotify("your_sp_dc")
+# Constants
+CONFIG_FILE = 'config.json'
+CACHE_FILE = 'lyrics_cache.pkl'
+MAX_CACHE_SIZE = 1000
+
+def load_or_get_spotify_cookie():
+    """Load SP_DC cookie from config file or prompt user to get it"""
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, 'r') as f:
+            config = json.load(f)
+            return config.get('sp_dc')
+    
+    return show_spotify_login_dialog()
+
+def show_spotify_login_dialog():
+    """Show dialog with instructions to get SP_DC cookie"""
+    dialog = tk.Toplevel()
+    dialog.title("Spotify Authentication")
+    dialog.geometry("600x400")
+    
+    instructions = """
+    To use this app, you need to get your Spotify SP_DC cookie:
+    
+    1. Click the 'Open Spotify' button below
+    2. Log in to Spotify if needed
+    3. Press F12 to open Developer Tools
+    4. Go to Application > Cookies > https://spotify.com
+    5. Find 'sp_dc' cookie and copy its value
+    6. Paste the value in the field below
+    """
+    
+    label = ttk.Label(dialog, text=instructions, wraplength=550)
+    label.pack(pady=20)
+    
+    def open_spotify():
+        webbrowser.open('https://open.spotify.com')
+    
+    open_button = ttk.Button(dialog, text="Open Spotify", command=open_spotify)
+    open_button.pack(pady=10)
+    
+    cookie_var = tk.StringVar()
+    cookie_entry = ttk.Entry(dialog, textvariable=cookie_var, width=50)
+    cookie_entry.pack(pady=10)
+    
+    def save_cookie():
+        sp_dc = cookie_var.get().strip()
+        if sp_dc:
+            try:
+                # Test the cookie
+                test_sp = Spotify(sp_dc)
+                test_sp.get_current_song()
+                
+                # Save to config if valid
+                with open(CONFIG_FILE, 'w') as f:
+                    json.dump({'sp_dc': sp_dc}, f)
+                
+                dialog.destroy()
+            except Exception as e:
+                messagebox.showerror("Error", "Invalid SP_DC cookie. Please try again.")
+        else:
+            messagebox.showerror("Error", "Please enter the SP_DC cookie value.")
+    
+    save_button = ttk.Button(dialog, text="Save", command=save_cookie)
+    save_button.pack(pady=10)
+    
+    dialog.transient(root)
+    dialog.grab_set()
+    return None
+
+# Initialize the main window first
+root = tk.Tk()
+root.title("Spotify Lyrics Translator")
+
+# Then initialize Spotify with the cookie
+sp_dc = load_or_get_spotify_cookie()
+if sp_dc:
+    sp = Spotify(sp_dc)
+else:
+    messagebox.showerror("Error", "Cannot start without Spotify authentication")
+    root.destroy()
+    exit()
 
 # Cache to store the translated lyrics
 CACHE_FILE = 'lyrics_cache.pkl'
