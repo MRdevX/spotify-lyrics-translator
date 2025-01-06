@@ -1,40 +1,99 @@
-name: Build and Release
+name: Release
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - main
+    paths-ignore:
+      - "version.json"
+      - "**.md"
 
 jobs:
-  build-macos:
+  version-and-release:
     runs-on: macos-latest
+    permissions:
+      contents: write
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
+          cache: "pip"
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          brew install create-dmg
-          python -m pip install pyinstaller
+          brew install python-tk@3.11
 
-      - name: Build App and Create DMG
+      - name: Determine version bump
+        id: version-bump
         run: |
-          python build_dmg.py
+          # Get commit messages since last tag
+          COMMITS=$(git log $(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD --pretty=format:"%s")
+          echo "Commit messages:"
+          echo "$COMMITS"
 
-      - name: Create Release
-        id: create_release
+          # Determine version bump type based on commit messages
+          if echo "$COMMITS" | grep -iE "^break|^breaking|^major|BREAKING CHANGE"; then
+            echo "type=major" >> $GITHUB_OUTPUT
+          elif echo "$COMMITS" | grep -iE "^feat|^feature|^minor"; then
+            echo "type=minor" >> $GITHUB_OUTPUT
+          else
+            echo "type=patch" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update version
+        id: version
+        run: |
+          # Run version manager with determined bump type
+          python version_manager.py ${{ steps.version-bump.outputs.type }} --no-tag
+
+          # Get the new version
+          VERSION=$(python -c "import json; print(json.load(open('version.json'))['major'], json.load(open('version.json'))['minor'], json.load(open('version.json'))['patch'], sep='.')")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build app
+        run: |
+          python build_app.py
+          cd dist
+          zip -r "Spotify Lyrics Translator-${{ steps.version.outputs.version }}.zip" "Spotify Lyrics Translator.app"
+
+      - name: Commit version changes
+        run: |
+          git add version.json setup.py
+          git commit -m "chore: bump version to ${{ steps.version.outputs.version }}"
+          git push
+
+      - name: Create Git tag
+        run: |
+          git tag -a "v${{ steps.version.outputs.version }}" -m "Release v${{ steps.version.outputs.version }}"
+          git push --tags
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: |
-            dist/SpotifyTranslator.dmg
+          tag_name: "v${{ steps.version.outputs.version }}"
+          name: "Release v${{ steps.version.outputs.version }}"
           draft: false
           prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          files: |
+            dist/Spotify Lyrics Translator-${{ steps.version.outputs.version }}.zip
+          body: |
+            ## What's Changed
+
+            ${{ github.event.head_commit.message }}
+
+            **Full Changelog**: https://github.com/${{ github.repository }}/compare/v$(git describe --tags --abbrev=0 "v${{ steps.version.outputs.version }}^")...v${{ steps.version.outputs.version }}

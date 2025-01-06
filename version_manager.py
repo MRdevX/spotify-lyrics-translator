@@ -7,6 +7,7 @@ import json
 import subprocess
 import sys
 from datetime import datetime
+import re
 
 VERSION_FILE = 'version.json'
 
@@ -79,14 +80,16 @@ def update_app_version(version):
     with open('setup.py', 'r') as f:
         content = f.read()
     
-    # Update version strings in setup.py
-    content = content.replace(
-        "'CFBundleVersion': \"1.0.0\"",
-        f"'CFBundleVersion': \"{version_str}\""
+    # Update version strings in setup.py using regex to handle any existing version
+    content = re.sub(
+        r"'CFBundleVersion':\s*\"[\d.]+\"",
+        f"'CFBundleVersion': \"{version_str}\"",
+        content
     )
-    content = content.replace(
-        "'CFBundleShortVersionString': \"1.0.0\"",
-        f"'CFBundleShortVersionString': \"{version_str}\""
+    content = re.sub(
+        r"'CFBundleShortVersionString':\s*\"[\d.]+\"",
+        f"'CFBundleShortVersionString': \"{version_str}\"",
+        content
     )
     
     with open('setup.py', 'w') as f:
@@ -94,23 +97,59 @@ def update_app_version(version):
     
     print(f"Updated version to {version_str} in setup.py")
 
+def get_commit_messages_since_last_tag():
+    """Get commit messages since the last tag"""
+    try:
+        # Get the last tag
+        last_tag = subprocess.run(
+            ['git', 'describe', '--tags', '--abbrev=0'],
+            capture_output=True, text=True, check=True
+        ).stdout.strip()
+        
+        # Get commit messages since last tag
+        commits = subprocess.run(
+            ['git', 'log', f'{last_tag}..HEAD', '--pretty=format:%s'],
+            capture_output=True, text=True, check=True
+        ).stdout.strip()
+    except subprocess.CalledProcessError:
+        # If no tags exist, get all commit messages
+        commits = subprocess.run(
+            ['git', 'log', '--pretty=format:%s'],
+            capture_output=True, text=True, check=True
+        ).stdout.strip()
+    
+    return commits.split('\n') if commits else []
+
+def determine_version_bump(commits):
+    """Determine version bump type based on commit messages"""
+    for commit in commits:
+        if re.search(r'^break|^breaking|^major|BREAKING CHANGE', commit, re.I):
+            return 'major'
+        elif re.search(r'^feat|^feature|^minor', commit, re.I):
+            return 'minor'
+    return 'patch'
+
 def main():
     """Main function to handle version updates"""
-    if len(sys.argv) < 2:
-        print("Usage: python version_manager.py [major|minor|patch] [--no-tag]")
-        sys.exit(1)
+    # Handle command line arguments
+    if len(sys.argv) < 2 or sys.argv[1] == '--auto':
+        # Auto-determine version bump from commit messages
+        commits = get_commit_messages_since_last_tag()
+        version_type = determine_version_bump(commits)
+        print(f"Automatically determined version bump: {version_type}")
+    else:
+        version_type = sys.argv[1].lower()
+        if version_type not in ['major', 'minor', 'patch']:
+            print("Version type must be 'major', 'minor', 'patch', or '--auto'")
+            sys.exit(1)
     
-    version_type = sys.argv[1].lower()
-    if version_type not in ['major', 'minor', 'patch']:
-        print("Version type must be 'major', 'minor', or 'patch'")
-        sys.exit(1)
-    
-    # Check if working directory is clean
-    result = subprocess.run(['git', 'status', '--porcelain'],
-                          capture_output=True, text=True, check=True)
-    if result.stdout.strip():
-        print("Error: Working directory is not clean. Commit or stash changes first.")
-        sys.exit(1)
+    # Check if working directory is clean (unless in CI)
+    if 'CI' not in os.environ:
+        result = subprocess.run(['git', 'status', '--porcelain'],
+                              capture_output=True, text=True, check=True)
+        if result.stdout.strip():
+            print("Error: Working directory is not clean. Commit or stash changes first.")
+            sys.exit(1)
     
     # Update version
     version = update_version(version_type)
