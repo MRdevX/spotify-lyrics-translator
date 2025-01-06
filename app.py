@@ -573,7 +573,11 @@ Technical details: {str(e)}
 
     def adjust_column_widths(self):
         """Adjust column widths with animation"""
-        min_time_width = 60
+        # Standard fixed widths
+        std_time_width = 60
+        std_lyrics_width = 350  # Standard width for lyrics columns
+        
+        # Calculate maximum content lengths
         max_original_length = 0
         max_translated_length = 0
         line_count = 0
@@ -582,48 +586,44 @@ Technical details: {str(e)}
             line_count += 1
             original_length = len(self.tree.item(item)['values'][1])
             translated_length = len(self.tree.item(item)['values'][2])
-            if original_length > max_original_length:
-                max_original_length = original_length
-            if translated_length > max_translated_length:
-                max_translated_length = translated_length
+            max_original_length = max(max_original_length, original_length)
+            max_translated_length = max(max_translated_length, translated_length)
 
-        self.root.update_idletasks()
-        width = self.tree.winfo_reqwidth()
-
-        # Calculate widths based on content
-        orig_length = max_original_length * 15
-        trans_length = max_translated_length * 15
-
-        # Adjust for different languages
-        if self.language == "ja":
-            orig_length = max_original_length * 23
-        if self.language == "ru":
-            orig_length = max_original_length * 18
-            trans_length = max_translated_length * 19
-
-        # Get window width
+        # Get window width and calculate available space
         window_width = self.root.winfo_width()
-        available_width = window_width - min_time_width - 50  # Account for scrollbar and padding
+        available_width = window_width - std_time_width - 50  # Account for scrollbar and padding
 
-        # Calculate proportional widths
-        total_content = orig_length + trans_length
-        if total_content > 0:
-            orig_ratio = orig_length / total_content
-            trans_ratio = trans_length / total_content
-            
-            orig_width = int(available_width * orig_ratio)
-            trans_width = int(available_width * trans_ratio)
-        else:
-            orig_width = available_width // 2
-            trans_width = available_width // 2
+        # Calculate content-based widths (pixels per character)
+        char_width = {
+            "default": 10,
+            "ja": 20,  # Japanese characters need more width
+            "ru": 12,  # Cyrillic characters need slightly more width
+            "zh": 20,  # Chinese characters need more width
+        }
+        pixels_per_char = char_width.get(self.language, char_width["default"])
 
-        # Set minimum widths
+        # Calculate minimum required widths based on content
+        min_orig_width = max_original_length * pixels_per_char
+        min_trans_width = max_translated_length * pixels_per_char
+
+        # Use standard width if content is smaller, otherwise use content-based width
+        orig_width = max(std_lyrics_width, min_orig_width)
+        trans_width = max(std_lyrics_width, min_trans_width)
+
+        # If total width exceeds available space, scale proportionally
+        total_width = orig_width + trans_width
+        if total_width > available_width:
+            scale_factor = available_width / total_width
+            orig_width = int(orig_width * scale_factor)
+            trans_width = int(trans_width * scale_factor)
+
+        # Ensure minimum width
         orig_width = max(200, orig_width)
         trans_width = max(200, trans_width)
 
         # Animate the resizing
         for col, (old_width, new_width) in {
-            "Time": (self.tree.column("Time")['width'], min_time_width),
+            "Time": (self.tree.column("Time")['width'], std_time_width),
             "Original Lyrics": (self.tree.column("Original Lyrics")['width'], orig_width),
             "Translated Lyrics": (self.tree.column("Translated Lyrics")['width'], trans_width)
         }.items():
@@ -632,8 +632,8 @@ Technical details: {str(e)}
             else:
                 self.tree.column(col, width=new_width)
 
-        # Update window height
-        height = line_count * 30 + 100
+        # Update window height based on content
+        height = min(800, max(500, line_count * 30 + 100))  # Min 500px, Max 800px
         self.root.geometry(f"{window_width}x{height}")
 
     def on_window_resize(self, event=None):
