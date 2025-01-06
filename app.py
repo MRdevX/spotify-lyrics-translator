@@ -1,5 +1,23 @@
-import tkinter as tk
-from tkinter import ttk, messagebox
+try:
+    import tkinter as tk
+    from tkinter import ttk, messagebox
+except ImportError:
+    print("""
+Error: Tkinter is not installed!
+
+Please install tkinter for your system:
+
+macOS:
+    brew install python-tk
+
+Ubuntu/Debian:
+    sudo apt-get install python3-tk
+
+Fedora:
+    sudo dnf install python3-tkinter
+    """)
+    exit(1)
+
 from deep_translator import GoogleTranslator
 from syrics.api import Spotify
 import threading

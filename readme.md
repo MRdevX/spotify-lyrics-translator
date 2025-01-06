@@ -11,6 +11,23 @@ Display translated lyrics of the currently playing Spotify track in real-time, w
 
 ## Installation
 
+### System Requirements
+
+#### macOS
+```bash
+brew install python-tk
+```
+
+#### Ubuntu/Debian
+```bash
+sudo apt-get install python3-tk
+```
+
+#### Fedora
+```bash
+sudo dnf install python3-tkinter
+```
+
 ### For Users
 1. Download the latest release from the [Releases](https://github.com/yourusername/spotify-lyrics-translator/releases) page
 2. Run the SpotifyLyricsTranslator executable
