@@ -25,7 +25,7 @@ OPTIONS = {
         'CFBundleVersion': '1.0.0',
         'CFBundleShortVersionString': '1.0.0',
         'NSHumanReadableCopyright': '© 2024 MrDevX',
-        'LSMinimumSystemVersion': '10.10.0',
+        'LSMinimumSystemVersion': '10.10.0'
     },
     'packages': [
         'tkinter',
@@ -50,7 +50,10 @@ OPTIONS = {
         'sv_ttk'
     ],
     'iconfile': os.path.join(project_root, 'assets/app_icon.icns'),
-    'resources': [os.path.join(project_root, 'src')]
+    'resources': [os.path.join(project_root, 'src')],
+    'site_packages': True,
+    'strip': False,
+    'semi_standalone': True
 }
 
 def main():
