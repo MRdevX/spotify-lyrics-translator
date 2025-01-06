@@ -7,6 +7,7 @@ import subprocess
 import shutil
 import sys
 import platform
+import glob
 
 def clean_build():
     """Clean previous build artifacts"""
@@ -15,6 +16,15 @@ def clean_build():
     for dir_name in dirs_to_clean:
         if os.path.exists(dir_name):
             shutil.rmtree(dir_name)
+    
+    # Also clean .pyc files and __pycache__ directories
+    for root, dirs, files in os.walk('.'):
+        for d in dirs:
+            if d == '__pycache__':
+                shutil.rmtree(os.path.join(root, d))
+        for f in files:
+            if f.endswith('.pyc'):
+                os.remove(os.path.join(root, f))
 
 def install_requirements():
     """Install required packages"""
@@ -23,107 +33,152 @@ def install_requirements():
         # Ensure pip is up to date
         subprocess.run([sys.executable, '-m', 'pip', 'install', '--upgrade', 'pip'], check=True)
         
-        # Install core dependencies first
-        core_deps = [
-            'Pillow',
-            'beautifulsoup4',
-            'certifi',
-            'requests',
-            'urllib3',
-            'charset-normalizer',
-            'idna',
-            'soupsieve',
-            'spotipy',
-            'tqdm',
-            'tinytag',
-            'redis'
-        ]
-        
-        for dep in core_deps:
-            print(f"Installing {dep}...")
-            subprocess.run([sys.executable, '-m', 'pip', 'install', '--upgrade', dep], check=True)
-        
         # Install requirements from file
         print("Installing requirements from requirements.txt...")
         subprocess.run([sys.executable, '-m', 'pip', 'install', '-r', 'requirements.txt'], check=True)
         
-        # Install py2app last
+        # Install py2app with specific version
         print("Installing py2app...")
-        subprocess.run([sys.executable, '-m', 'pip', 'install', '--upgrade', 'py2app'], check=True)
+        subprocess.run([sys.executable, '-m', 'pip', 'install', '--upgrade', 'py2app==0.28.6'], check=True)
         
         # Verify critical imports
         print("\nVerifying installations:")
-        try:
-            import PIL
-            print(f"PIL/Pillow version: {PIL.__version__}")
-            print(f"PIL path: {PIL.__file__}")
-        except ImportError as e:
-            print(f"Warning: PIL import failed: {e}")
-            
-        try:
-            import bs4
-            print(f"BeautifulSoup4 version: {bs4.__version__}")
-            print(f"BS4 path: {bs4.__file__}")
-        except ImportError as e:
-            print(f"Warning: BeautifulSoup4 import failed: {e}")
+        critical_packages = [
+            ('tkinter', 'Tkinter'),
+            ('deep_translator', 'Deep Translator'),
+            ('syrics', 'Syrics'),
+            ('sv_ttk', 'Sun Valley TTK Theme'),
+            ('spotipy', 'Spotipy'),
+            ('PIL', 'Pillow')
+        ]
+        
+        for package, name in critical_packages:
+            try:
+                module = __import__(package)
+                print(f"✓ {name} successfully imported")
+            except ImportError as e:
+                print(f"✗ Error: {name} import failed: {e}")
+                raise
             
     except subprocess.CalledProcessError as e:
         print(f"Error installing requirements: {e}")
         raise
 
+def verify_files():
+    """Verify all required files exist"""
+    required_files = [
+        ('src/main.py', 'Main application file'),
+        ('src/config/config.json', 'Configuration file'),
+        ('assets/app_icon.icns', 'Application icon'),
+        ('requirements.txt', 'Requirements file'),
+        ('setup.py', 'Setup configuration')
+    ]
+    
+    missing_files = []
+    for file_path, description in required_files:
+        if not os.path.exists(file_path):
+            missing_files.append(f"{description} ({file_path})")
+    
+    if missing_files:
+        print("Error: Missing required files:")
+        for file in missing_files:
+            print(f"  - {file}")
+        raise FileNotFoundError("Required files are missing")
+
 def build_app():
     """Build the macOS app"""
     print("Building macOS app...")
     try:
-        # Build command
-        build_cmd = [sys.executable, 'setup.py', 'py2app']
+        verify_files()
+        
+        # Build command for standalone app
+        build_cmd = [
+            sys.executable,
+            'setup.py',
+            'py2app',
+            '--no-strip',
+            '--packages=tkinter,deep_translator,syrics,sv_ttk,spotipy,PIL'
+        ]
         
         # Add architecture flag if on Apple Silicon
         if platform.machine() == 'arm64':
-            build_cmd.append('--arch=arm64')
-            
-        # Add no-strip flag
-        build_cmd.append('--no-strip')
+            build_cmd.extend(['--arch=arm64'])
         
         print(f"Running build command: {' '.join(build_cmd)}")
         subprocess.run(build_cmd, check=True)
-        print("Build completed successfully")
         
-        # Verify the app bundle exists
+        # Verify the app bundle
         app_path = os.path.join('dist', 'Spotify Lyrics Translator.app')
-        if os.path.exists(app_path):
-            print(f"App bundle created successfully at: {app_path}")
-        else:
-            print("Warning: App bundle not found in expected location")
-            
+        if not os.path.exists(app_path):
+            raise FileNotFoundError(f"App bundle not found at {app_path}")
+        
+        print("\nVerifying app bundle contents:")
+        critical_paths = [
+            'Contents/MacOS/Spotify Lyrics Translator',
+            'Contents/Resources/lib/python*/site-packages',
+            'Contents/Resources/src/main.py',
+            'Contents/Resources/src/config/config.json'
+        ]
+        
+        for path in critical_paths:
+            full_path = os.path.join(app_path, path)
+            matches = glob.glob(full_path)
+            if not matches:
+                print(f"✗ Warning: {path} not found in app bundle")
+            else:
+                print(f"✓ Found {path}")
+        
+        print("\nBuild completed successfully!")
+        print(f"App bundle created at: {os.path.abspath(app_path)}")
+        
     except subprocess.CalledProcessError as e:
         print(f"Error during build: {e}")
         raise
+    except Exception as e:
+        print(f"Unexpected error during build: {e}")
+        raise
+
+def verify_environment():
+    """Verify the build environment"""
+    print("\nVerifying build environment:")
+    
+    # Check Python version
+    python_version = sys.version.split()[0]
+    print(f"✓ Python version: {python_version}")
+    
+    # Check virtual environment
+    in_venv = hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix)
+    if not in_venv:
+        raise EnvironmentError("Please run this script in a virtual environment")
+    print("✓ Running in virtual environment")
+    
+    # Check directory structure
+    if not os.path.isdir('src'):
+        raise EnvironmentError("Please run this script from the project root directory (where src/ is located)")
+    print("✓ Directory structure verified")
 
 def main():
     """Main build process"""
     try:
-        # Print system information
+        print("\nStarting build process for Spotify Lyrics Translator")
+        print("=" * 50)
+        
         print("\nSystem Information:")
         print(f"Python version: {sys.version}")
         print(f"Platform: {platform.platform()}")
         print(f"Architecture: {platform.machine()}")
         print(f"Working directory: {os.getcwd()}")
-        print()
         
-        # Ensure we're in a virtual environment
-        if not hasattr(sys, 'real_prefix') and not (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
-            print("Error: Please run this script in a virtual environment")
-            sys.exit(1)
-
+        verify_environment()
         clean_build()
         install_requirements()
         build_app()
         
-        print("\nBuild successful! The app is located in the 'dist' directory.")
+        print("\nBuild process completed successfully!")
         print("You can now move 'dist/Spotify Lyrics Translator.app' to your Applications folder.")
+        
     except Exception as e:
-        print(f"\nError during build process: {e}")
+        print(f"\nError: Build process failed: {str(e)}")
         sys.exit(1)
 
 if __name__ == "__main__":

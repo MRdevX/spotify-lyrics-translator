@@ -1,71 +1,50 @@
 """
-Setup script for building macOS app using py2app
+Setup script for building the macOS app using py2app
 """
 from setuptools import setup
 
-APP = ['app.py']
-DATA_FILES = []
+APP = ['src/main.py']
+DATA_FILES = [
+    ('src/config', ['src/config/config.json']),
+    ('assets', ['assets/app_icon.icns'])
+]
 
 OPTIONS = {
     'argv_emulation': False,
-    'iconfile': 'app_icon.icns',
     'plist': {
         'CFBundleName': 'Spotify Lyrics Translator',
         'CFBundleDisplayName': 'Spotify Lyrics Translator',
-        'CFBundleGetInfoString': "Translate Spotify lyrics in real-time",
-        'CFBundleIdentifier': "com.mrdevx.spotifytranslator",
-        'CFBundleVersion': "1.2.4",
-        'CFBundleShortVersionString': "1.2.4",
-        'NSHumanReadableCopyright': "Copyright © 2024 Mahdi Rashidi, All Rights Reserved",
-        'NSHighResolutionCapable': True,
-        'LSMinimumSystemVersion': '10.13',
+        'CFBundleGetInfoString': 'Translate Spotify lyrics in real-time',
+        'CFBundleIdentifier': 'com.mrdevx.spotifylyricsapp',
+        'CFBundleVersion': '1.0.0',
+        'CFBundleShortVersionString': '1.0.0',
+        'NSHumanReadableCopyright': '© 2024 MrDevX',
+        'LSMinimumSystemVersion': '10.10.0',
     },
     'packages': [
         'tkinter',
         'deep_translator',
         'syrics',
         'sv_ttk',
-        'certifi',
         'requests',
         'urllib3',
+        'certifi',
         'charset_normalizer',
         'idna',
-        'bs4',
-        'soupsieve',
-        'spotipy',
         'tqdm',
-        'tinytag',
+        'spotipy',
         'redis',
+        'bs4',
         'PIL'
     ],
     'includes': [
+        'tkinter',
         'tkinter.ttk',
-        'json',
-        'threading',
-        'pickle',
-        'webbrowser',
-        'os',
-        'sys',
-        'PIL._tkinter_finder',
-        'bs4.builder',
-        'PIL.Image'
+        'PIL',
+        'sv_ttk'
     ],
-    'excludes': [
-        'matplotlib',
-        'numpy',
-        'pandas',
-        'scipy'
-    ],
-    'frameworks': [],
-    'resources': [],
-    'site_packages': True,
-    'strip': False,
-    'optimize': 0,
-    'semi_standalone': True,
-    'alias': False,
-    'use_faulthandler': True,
-    'arch': 'arm64',
-    'prefer_ppc': False
+    'iconfile': 'assets/app_icon.icns',
+    'resources': ['src']
 }
 
 setup(
