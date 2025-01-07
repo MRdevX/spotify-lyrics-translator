@@ -140,6 +140,7 @@ jobs:
         id: changelog
         shell: python
         run: |
+          import os
           import json
           with open('version.json', 'r') as f:
               version_data = json.load(f)
