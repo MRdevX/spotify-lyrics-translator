@@ -1,9 +1,9 @@
 {
     "major": 2,
     "minor": 0,
-    "patch": 20,
-    "build": 23,
+    "patch": 21,
+    "build": 24,
     "release_date": "2025-01-07",
-    "release_notes": "### \ud83d\udc1b Bug Fixes\n- \ud83d\udc1b Import os module in release workflow for changelog processing (1d1c40b)\n",
-    "changelog": "### \ud83d\udc1b Bug Fixes\n- \ud83d\udc1b Import os module in release workflow for changelog processing (1d1c40b)\n"
+    "release_notes": "### \u2728 New Features\n- \u2728 Enhance build process and debugging for macOS and Windows (43a7efb)\n",
+    "changelog": "### \u2728 New Features\n- \u2728 Enhance build process and debugging for macOS and Windows (43a7efb)\n"
 }
