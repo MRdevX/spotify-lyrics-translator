@@ -1,9 +1,9 @@
 {
     "major": 2,
     "minor": 0,
-    "patch": 22,
-    "build": 25,
+    "patch": 23,
+    "build": 26,
     "release_date": "2025-01-07",
-    "release_notes": "### \ud83d\udc1b Bug Fixes\n- \ud83d\udc1b Improve DMG creation process in release workflow (46e5677)\n",
-    "changelog": "### \ud83d\udc1b Bug Fixes\n- \ud83d\udc1b Improve DMG creation process in release workflow (46e5677)\n"
+    "release_notes": "### \ud83d\udc1b Bug Fixes\n- \ud83d\udc1b Update changelog processing in release workflow (d0c193b)\n",
+    "changelog": "### \ud83d\udc1b Bug Fixes\n- \ud83d\udc1b Update changelog processing in release workflow (d0c193b)\n"
 }
