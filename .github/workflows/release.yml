@@ -181,13 +181,22 @@ jobs:
         run: |
           import os
           import json
-          with open('version.json', 'r') as f:
+          import io
+          import sys
+
+          # Set UTF-8 encoding for Windows
+          if sys.platform == 'win32':
+              sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
+          with open('version.json', 'r', encoding='utf-8') as f:
               version_data = json.load(f)
+
           changelog = version_data.get('changelog', 'No changes recorded')
-          # Escape newlines for GitHub Actions
-          changelog = changelog.replace('\n', '%0A')
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
-              print(f"changelog={changelog}", file=fh)
+
+          # Write to GITHUB_OUTPUT using UTF-8 encoding
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as fh:
+              # Use literal newlines instead of %0A
+              fh.write(f"changelog<<EOF\n{changelog}\nEOF\n")
 
       - name: Create Release (macOS)
         if: matrix.os == 'macos-latest'
