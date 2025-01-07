@@ -6,12 +6,14 @@ from typing import Dict, List, Optional, Tuple, Callable
 
 from src.utils.time_utils import ms_to_min_sec
 from src.gui.utils.gui_utils import calculate_column_widths
+from src.gui.utils.font_manager import FontManager
 
 class LyricsView:
     """Component for displaying and managing lyrics."""
 
-    def __init__(self, container: ttk.Frame):
+    def __init__(self, container: ttk.Frame, font_manager: FontManager):
         self.container = container
+        self.font_manager = font_manager
         self.tree: Optional[ttk.Treeview] = None
         self.tooltip: Optional[tk.Toplevel] = None
         self.language: str = ""
@@ -34,6 +36,29 @@ class LyricsView:
             style="Treeview"
         )
         
+        # Configure column headings with custom font
+        heading_font = self.font_manager.get_font('Helvetica', 'normal', True)
+        style = ttk.Style()
+        style.configure(
+            "Treeview.Heading",
+            font=heading_font,
+            background='#1DB954',
+            foreground='white'
+        )
+        
+        # Configure row font
+        style.configure(
+            "Treeview",
+            font=self.font_manager.get_font('Helvetica', 'normal'),
+            rowheight=30,
+            background='#282828',
+            foreground='#FFFFFF',
+            fieldbackground='#282828',
+            borderwidth=0,
+            dividerwidth=2,
+            dividercolor='#404040'
+        )
+        
         for col in ("Time", "Original Lyrics", "Translated Lyrics"):
             self.tree.heading(col, text=col, anchor='w')
             self.tree.column(col, stretch=True)
@@ -43,6 +68,28 @@ class LyricsView:
         
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+    def update_fonts(self, font_manager: FontManager) -> None:
+        """Update component fonts."""
+        style = ttk.Style()
+        
+        # Update heading font
+        heading_font = font_manager.get_font('Helvetica', 'normal', True)
+        style.configure(
+            "Treeview.Heading",
+            font=heading_font
+        )
+        
+        # Update row font
+        row_font = font_manager.get_font('Helvetica', 'normal')
+        style.configure(
+            "Treeview",
+            font=row_font,
+            rowheight=max(30, row_font[1] * 2)  # Adjust row height based on font size
+        )
+        
+        # Force treeview to redraw
+        self.tree.update_idletasks()
 
     def bind_events(self, tooltip_callback: Callable, menu_callback: Callable) -> None:
         """Bind event handlers to the treeview."""

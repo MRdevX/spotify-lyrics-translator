@@ -5,12 +5,14 @@ from tkinter import ttk
 from typing import Dict
 
 from src.utils.time_utils import ms_to_min_sec
+from src.gui.utils.font_manager import FontManager
 
 class PlayerInfo:
     """Component for displaying player information and progress."""
 
-    def __init__(self, container: ttk.Frame):
+    def __init__(self, container: ttk.Frame, font_manager: FontManager):
         self.container = container
+        self.font_manager = font_manager
         self.song_label: ttk.Label
         self.album_label: ttk.Label
         self.time_label: ttk.Label
@@ -29,17 +31,19 @@ class PlayerInfo:
         song_details_frame = ttk.Frame(song_info_frame)
         song_details_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
+        # Song title with Spotify green color
         self.song_label = ttk.Label(
             song_details_frame,
             text="Loading...",
-            style="Song.TLabel"
+            font=self.font_manager.get_font('Helvetica', 'subtitle', True),
+            foreground='#1DB954'  # Spotify green
         )
         self.song_label.pack(anchor='w')
         
         self.album_label = ttk.Label(
             song_details_frame,
             text="",
-            style="Info.TLabel"
+            font=self.font_manager.get_font('Helvetica', 'normal')
         )
         self.album_label.pack(anchor='w')
         
@@ -50,7 +54,7 @@ class PlayerInfo:
         self.time_label = ttk.Label(
             time_frame,
             text="0:00 / 0:00",
-            style="Info.TLabel"
+            font=self.font_manager.get_font('Helvetica', 'normal')
         )
         self.time_label.pack(anchor='e')
         
@@ -88,4 +92,13 @@ class PlayerInfo:
         self.song_label.config(text="No song playing")
         self.album_label.config(text="")
         self.time_label.config(text="0:00 / 0:00")
-        self.progress_var.set(0) 
+        self.progress_var.set(0)
+
+    def update_fonts(self, font_manager: FontManager) -> None:
+        """Update component fonts."""
+        self.song_label.configure(
+            font=font_manager.get_font('Helvetica', 'subtitle', True),
+            foreground='#1DB954'  # Maintain Spotify green color
+        )
+        self.album_label.configure(font=font_manager.get_font('Helvetica', 'normal'))
+        self.time_label.configure(font=font_manager.get_font('Helvetica', 'normal')) 

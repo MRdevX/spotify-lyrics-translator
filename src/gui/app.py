@@ -17,6 +17,7 @@ from src.gui.components.lyrics_view import LyricsView
 from src.gui.components.player_info import PlayerInfo
 from src.gui.components.dialogs import LoginDialog, AboutDialog
 from src.gui.styles import configure_styles
+from src.gui.utils.font_manager import FontManager
 
 class SpotifyLyricsTranslator:
     """Main application class for Spotify Lyrics Translator."""
@@ -33,6 +34,7 @@ class SpotifyLyricsTranslator:
             # Initialize components
             self.authenticator = SpotifyAuthenticator(self.config)
             self.lyrics_cache = LyricsCache(self.config.CACHE_FILE, self.config.MAX_CACHE_SIZE)
+            self.font_manager = FontManager()
             self.sp: Optional[Spotify] = None
             
             # GUI state variables
@@ -130,15 +132,14 @@ Error type: {type(e)}
             main_container.pack(fill=tk.BOTH, expand=True)
             
             # Initialize components
-            self.player_info = PlayerInfo(main_container)
-            self.lyrics_view = LyricsView(main_container)
+            self.player_info = PlayerInfo(main_container, self.font_manager)
+            self.lyrics_view = LyricsView(main_container, self.font_manager)
             
             # Initialize status bar
             self.status_bar = ttk.Label(
                 main_container,
                 text="Ready",
-                font=('Helvetica', 10),
-                anchor='w'
+                font=self.font_manager.get_font('Helvetica', 'small')
             )
             self.status_bar.pack(fill=tk.X, pady=(10, 0))
             
@@ -147,6 +148,9 @@ Error type: {type(e)}
             
             # Bind events
             self._bind_events()
+            
+            # Register font change callback
+            self.font_manager.register_callback(self._update_fonts)
             
             # Start update loop
             self.root.after(500, self.update_display)
@@ -162,9 +166,49 @@ Error type: {type(e)}
         menubar = tk.Menu(self.root)
         self.root.config(menu=menubar)
         
+        # View menu
+        view_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="View", menu=view_menu)
+        
+        # Font size submenu
+        view_menu.add_command(label="Increase Font Size", 
+                            command=self._increase_font_size,
+                            accelerator="Ctrl++")
+        view_menu.add_command(label="Decrease Font Size", 
+                            command=self._decrease_font_size,
+                            accelerator="Ctrl+-")
+        view_menu.add_separator()
+        
+        # Help menu
         help_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Help", menu=help_menu)
         help_menu.add_command(label="About", command=self.show_about_dialog)
+        
+        # Bind keyboard shortcuts
+        self.root.bind('<Control-plus>', lambda e: self._increase_font_size())
+        self.root.bind('<Control-minus>', lambda e: self._decrease_font_size())
+        self.root.bind('<Control-equal>', lambda e: self._increase_font_size())  # For keyboards without numpad
+
+    def _increase_font_size(self) -> None:
+        """Increase the font size."""
+        if self.font_manager.increase_size():
+            self._update_fonts()
+
+    def _decrease_font_size(self) -> None:
+        """Decrease the font size."""
+        if self.font_manager.decrease_size():
+            self._update_fonts()
+
+    def _update_fonts(self) -> None:
+        """Update fonts throughout the application."""
+        # Update player info fonts
+        self.player_info.update_fonts(self.font_manager)
+        
+        # Update lyrics view fonts
+        self.lyrics_view.update_fonts(self.font_manager)
+        
+        # Adjust column widths after font change
+        self.lyrics_view.adjust_column_widths(self.root.winfo_width())
 
     def _bind_events(self) -> None:
         """Bind event handlers."""
@@ -311,4 +355,6 @@ Error type: {type(e)}
 
     def run(self) -> None:
         """Start the application main loop."""
-        self.root.mainloop() 
+        self.root.mainloop()
+        # Clean up
+        self.font_manager.unregister_callback(self._update_fonts) 
