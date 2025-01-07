@@ -157,7 +157,20 @@ a = Analysis(
         ('version.json', '.'),
         ('src/config/config.json', 'src/config')
     ],
-    hiddenimports=['PIL._tkinter_finder'],
+    hiddenimports=[
+        'PIL._tkinter_finder',
+        'tkinter',
+        'tkinter.ttk',
+        'PIL',
+        'deep_translator',
+        'syrics',
+        'sv_ttk',
+        'spotipy',
+        'json',
+        'threading',
+        'webbrowser',
+        'pkg_resources'
+    ],
     hookspath=[],
     hooksconfig={{}},
     runtime_hooks=[],
@@ -180,7 +193,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=False,
+    console=True,  # Set to True temporarily for debugging
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
@@ -205,23 +218,51 @@ coll = COLLECT(
         with open('SpotifyTranslator.spec', 'w') as f:
             f.write(spec_content)
         
-        # Build command
+        print("\nBuilding Windows executable...")
+        
+        # Build command with detailed output
         build_cmd = [
             'pyinstaller',
             '--clean',
             '--windowed',
             '--noconfirm',
+            '--log-level=DEBUG',
             'SpotifyTranslator.spec'
         ]
         
-        # Run build
-        subprocess.run(build_cmd, check=True)
+        # Run build with output capture
+        process = subprocess.run(
+            build_cmd,
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        
+        # Print output for debugging
+        if process.stdout:
+            print("\nBuild Output:")
+            print(process.stdout)
+        
+        if process.stderr:
+            print("\nBuild Errors:")
+            print(process.stderr)
         
         print("\nBuild completed successfully!")
         print("Executable created at: dist/Spotify Lyrics Translator")
         
     except subprocess.CalledProcessError as e:
-        print(f"Error building app: {e}")
+        print(f"\nError building app:")
+        print(f"Command: {e.cmd}")
+        print(f"Return code: {e.returncode}")
+        if e.stdout:
+            print("\nOutput:")
+            print(e.stdout)
+        if e.stderr:
+            print("\nErrors:")
+            print(e.stderr)
+        sys.exit(1)
+    except Exception as e:
+        print(f"\nUnexpected error: {str(e)}")
         sys.exit(1)
 
 def verify_environment():

@@ -89,8 +89,13 @@ jobs:
           source venv/Scripts/activate
           export PYTHONPATH=$PYTHONPATH:$PWD
           export ARCHFLAGS=${{ env.ARCHFLAGS }}
+          # Install additional dependencies
+          python -m pip install pillow pywin32-ctypes
+          # Run build with debug output
           python -X utf8 scripts/build_app.py
+          # List contents for debugging
           ls -la dist
+          ls -la dist/"Spotify Lyrics Translator"
 
       - name: Create DMG (macOS)
         if: matrix.os == 'macos-latest'
@@ -102,19 +107,43 @@ jobs:
           # Set permissions
           chmod -R 755 "dist/Spotify Lyrics Translator.app"
 
-          # Create DMG
-          create-dmg \
-            --volname "Spotify Lyrics Translator" \
-            --volicon ".tmp_icon/.VolumeIcon.icns" \
-            --window-pos 200 120 \
-            --window-size 800 400 \
-            --icon-size 100 \
-            --icon "Spotify Lyrics Translator.app" 200 200 \
-            --hide-extension "Spotify Lyrics Translator.app" \
-            --app-drop-link 600 200 \
-            --no-internet-enable \
-            "dist/Spotify Lyrics Translator.dmg" \
-            "dist/Spotify Lyrics Translator.app"
+          # Create DMG with retries
+          max_attempts=3
+          attempt=1
+          while [ $attempt -le $max_attempts ]; do
+            echo "Attempt $attempt to create DMG..."
+            if create-dmg \
+              --volname "Spotify Lyrics Translator" \
+              --volicon ".tmp_icon/.VolumeIcon.icns" \
+              --window-pos 200 120 \
+              --window-size 800 400 \
+              --icon-size 100 \
+              --icon "Spotify Lyrics Translator.app" 200 200 \
+              --hide-extension "Spotify Lyrics Translator.app" \
+              --app-drop-link 600 200 \
+              --no-internet-enable \
+              "dist/Spotify Lyrics Translator.dmg" \
+              "dist/Spotify Lyrics Translator.app"; then
+              echo "DMG created successfully!"
+              break
+            else
+              echo "DMG creation failed on attempt $attempt"
+              if [ $attempt -eq $max_attempts ]; then
+                echo "All attempts to create DMG failed"
+                exit 1
+              fi
+              sleep 5
+            fi
+            ((attempt++))
+          done
+
+          # Verify DMG
+          if [ -f "dist/Spotify Lyrics Translator.dmg" ]; then
+            echo "DMG file exists and has size: $(ls -lh "dist/Spotify Lyrics Translator.dmg")"
+          else
+            echo "Error: DMG file was not created"
+            exit 1
+          fi
 
       - name: Package App (macOS)
         if: matrix.os == 'macos-latest'
