@@ -136,6 +136,18 @@ jobs:
         shell: bash
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
+      - name: Read changelog
+        id: changelog
+        shell: python
+        run: |
+          import json
+          with open('version.json', 'r') as f:
+              version_data = json.load(f)
+          changelog = version_data.get('changelog', 'No changes recorded')
+          # Escape newlines for GitHub Actions
+          changelog = changelog.replace('\n', '%0A')
+          print(f"::set-output name=changelog::{changelog}")
+
       - name: Create Release (macOS)
         if: matrix.os == 'macos-latest'
         uses: softprops/action-gh-release@v1
@@ -148,6 +160,10 @@ jobs:
             dist/${{ matrix.dmg_name }}
           body: |
             # Spotify Lyrics Translator ${{ env.VERSION }}
+
+            ## What's Changed
+
+            ${{ steps.changelog.outputs.changelog }}
 
             ## Installation (macOS)
 
@@ -168,9 +184,6 @@ jobs:
             - Apple Silicon or Intel Mac
             - Spotify Premium account
             - Active internet connection
-
-            ## Changes in this version
-            <!-- Add release notes here -->
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -186,6 +199,10 @@ jobs:
           body: |
             # Spotify Lyrics Translator ${{ env.VERSION }}
 
+            ## What's Changed
+
+            ${{ steps.changelog.outputs.changelog }}
+
             ## Installation (Windows)
 
             1. Download `Spotify Lyrics Translator-Windows.zip`
@@ -196,9 +213,6 @@ jobs:
             - Windows 10 or later (64-bit)
             - Spotify Premium account
             - Active internet connection
-
-            ## Changes in this version
-            <!-- Add release notes here -->
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
