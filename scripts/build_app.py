@@ -263,19 +263,19 @@ def verify_environment():
     
     # Check Python version
     python_version = sys.version.split()[0]
-    print(f"✓ Python version: {python_version}")
+    print(f"Python version: {python_version}")
     
     # Check virtual environment
     in_venv = hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix)
     if not in_venv:
         raise EnvironmentError("Please run this script in a virtual environment")
-    print("✓ Running in virtual environment")
+    print("Virtual environment: OK")
     
     # Check directory structure
     src_path = os.path.join(project_root, 'src')
     if not os.path.isdir(src_path):
         raise EnvironmentError("Project structure is invalid (src/ directory not found)")
-    print("✓ Directory structure verified")
+    print("Directory structure: OK")
 
 def convert_icon():
     """Convert macOS icon to Windows format if needed"""
@@ -316,6 +316,16 @@ def main():
         print(f"Platform: {platform.platform()}")
         print(f"Architecture: {platform.machine()}")
         print(f"Working directory: {os.getcwd()}")
+        
+        # Set architecture based on platform
+        if sys.platform == 'darwin':
+            os.environ['ARCHFLAGS'] = "-arch arm64"
+        else:
+            os.environ['ARCHFLAGS'] = "-arch x86_64"
+            # Set UTF-8 encoding for Windows
+            if sys.platform == 'win32':
+                sys.stdout.reconfigure(encoding='utf-8')
+                sys.stderr.reconfigure(encoding='utf-8')
         
         verify_environment()
         clean_build()

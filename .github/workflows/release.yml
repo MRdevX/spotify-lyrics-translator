@@ -9,15 +9,16 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [macos-latest, windows-latest]
         include:
           - os: macos-latest
             output_name: "Spotify Lyrics Translator.app"
             zip_name: "Spotify Lyrics Translator-macOS.zip"
             dmg_name: "Spotify Lyrics Translator.dmg"
+            python_arch: "arm64"
           - os: windows-latest
             output_name: "Spotify Lyrics Translator.exe"
             zip_name: "Spotify Lyrics Translator-Windows.zip"
+            python_arch: "x64"
 
     runs-on: ${{ matrix.os }}
 
@@ -29,7 +30,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: "pip"
-          architecture: "x64"
+          architecture: ${{ matrix.python_arch }}
 
       - name: Install system dependencies (macOS)
         if: matrix.os == 'macos-latest'
@@ -61,12 +62,22 @@ jobs:
           echo '{"sp_dc": ""}' > src/config/config.json
           ls -la src/config/
 
+      - name: Set architecture flags
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" = "macos-latest" ]; then
+            echo "ARCHFLAGS=-arch arm64" >> $GITHUB_ENV
+          else
+            echo "ARCHFLAGS=-arch x86_64" >> $GITHUB_ENV
+          fi
+
       - name: Build App (macOS)
         if: matrix.os == 'macos-latest'
         shell: bash
         run: |
           source venv/bin/activate
           export PYTHONPATH=$PYTHONPATH:$PWD
+          export ARCHFLAGS=${{ env.ARCHFLAGS }}
           python scripts/build_app.py
           ls -la dist/"Spotify Lyrics Translator.app"/Contents/MacOS
           ls -la dist/"Spotify Lyrics Translator.app"/Contents/Resources
@@ -77,7 +88,8 @@ jobs:
         run: |
           source venv/Scripts/activate
           export PYTHONPATH=$PYTHONPATH:$PWD
-          python scripts/build_app.py
+          export ARCHFLAGS=${{ env.ARCHFLAGS }}
+          python -X utf8 scripts/build_app.py
           ls -la dist
 
       - name: Create DMG (macOS)
@@ -174,7 +186,7 @@ jobs:
             3. Run `Spotify Lyrics Translator.exe`
 
             ## System Requirements (Windows)
-            - Windows 10 or later
+            - Windows 10 or later (64-bit)
             - Spotify Premium account
             - Active internet connection
 
