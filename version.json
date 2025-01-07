@@ -1,9 +1,9 @@
 {
     "major": 2,
     "minor": 0,
-    "patch": 25,
-    "build": 28,
+    "patch": 26,
+    "build": 29,
     "release_date": "2025-01-07",
-    "release_notes": "### \ud83d\udd27 Chores\n- \ud83d\udd27 remove unused dependencies from requirements.txt (0b2673f)\n",
-    "changelog": "### \ud83d\udd27 Chores\n- \ud83d\udd27 remove unused dependencies from requirements.txt (0b2673f)\n"
+    "release_notes": "No release notes provided",
+    "changelog": ""
 }
