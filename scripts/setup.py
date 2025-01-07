@@ -16,10 +16,7 @@ python_version = platform.python_version()
 python_short_version = '.'.join(python_version.split('.')[:2])
 
 # Determine Python framework paths based on architecture
-if platform.machine() == 'arm64':
-    framework_base = '/opt/homebrew/opt/python@3.11/Frameworks/Python.framework/Versions/3.11'
-else:
-    framework_base = '/usr/local/opt/python@3.11/Frameworks/Python.framework/Versions/3.11'
+framework_base = '/opt/homebrew/opt/python@3.11/Frameworks/Python.framework/Versions/3.11' if platform.machine() == 'arm64' else '/usr/local/opt/python@3.11/Frameworks/Python.framework/Versions/3.11'
 
 APP = [os.path.join(project_root, 'src/main.py')]
 DATA_FILES = [
@@ -43,18 +40,15 @@ OPTIONS = {
         'LSApplicationCategoryType': 'public.app-category.music',
         'CFBundleDocumentTypes': [],
         'CFBundleTypeIconFiles': [],
-        'NSRequiresAquaSystemAppearance': False,  # Enable Dark Mode support
+        'NSRequiresAquaSystemAppearance': False,
         'PyRuntimeLocations': [
-            # Current environment's Python
             '@executable_path/../Frameworks/Python.framework/Versions/Current/Python',
-            # Homebrew Python locations
             f'{framework_base}/Python',
-            # System Python locations
             f'/Library/Frameworks/Python.framework/Versions/{python_short_version}/Python',
             '/usr/local/Frameworks/Python.framework/Python',
         ],
         'PyOptions': {
-            'alias': False,  # Set to True for development
+            'alias': False,
             'argv_emulation': False,
             'site_packages': True,
             'includes': ['pkg_resources.py2_warn']
@@ -70,39 +64,26 @@ OPTIONS = {
         'certifi',
         'charset_normalizer',
         'idna',
-        'tqdm',
-        'spotipy',
-        'redis',
-        'bs4',
-        'PIL',
-        'pkg_resources'
+        'PIL'
     ],
     'includes': [
-        'tkinter',
         'tkinter.ttk',
         'PIL',
-        'sv_ttk',
-        'pkg_resources.py2_warn'
+        'sv_ttk'
     ],
     'excludes': [
         'matplotlib',
         'numpy',
         'scipy',
-        'pandas',
-        'PyQt5',
-        'PyQt6',
-        'PySide2',
-        'PySide6',
-        'wx'
+        'pandas'
     ],
     'iconfile': os.path.join(project_root, 'assets/app_icon.icns'),
     'resources': [os.path.join(project_root, 'src')],
     'frameworks': [f'{framework_base}/Python'],
     'site_packages': True,
     'strip': False,
-    'semi_standalone': False,  # Set to True for development
-    'arch': platform.machine(),
-    'matplotlib_backends': '-'  # Disable matplotlib backends
+    'semi_standalone': False,
+    'arch': platform.machine()
 }
 
 def main():
@@ -136,16 +117,12 @@ def main():
             'deep_translator',
             'syrics',
             'sv_ttk',
-            'spotipy',
             'Pillow',
             'requests',
             'urllib3',
             'certifi',
             'charset_normalizer',
-            'idna',
-            'tqdm',
-            'redis',
-            'beautifulsoup4'
+            'idna'
         ],
     )
 
