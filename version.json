@@ -1,9 +1,9 @@
 {
     "major": 2,
     "minor": 0,
-    "patch": 24,
-    "build": 27,
+    "patch": 25,
+    "build": 28,
     "release_date": "2025-01-07",
-    "release_notes": "### \u267b\ufe0f Code Refactoring\n- \u267b\ufe0f streamline setup.py and remove unused modules (56c4e59)\n",
-    "changelog": "### \u267b\ufe0f Code Refactoring\n- \u267b\ufe0f streamline setup.py and remove unused modules (56c4e59)\n"
+    "release_notes": "### \ud83d\udd27 Chores\n- \ud83d\udd27 remove unused dependencies from requirements.txt (0b2673f)\n",
+    "changelog": "### \ud83d\udd27 Chores\n- \ud83d\udd27 remove unused dependencies from requirements.txt (0b2673f)\n"
 }
