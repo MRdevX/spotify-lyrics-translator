@@ -1,9 +1,9 @@
 {
     "major": 2,
     "minor": 0,
-    "patch": 23,
-    "build": 26,
+    "patch": 24,
+    "build": 27,
     "release_date": "2025-01-07",
-    "release_notes": "### \ud83d\udc1b Bug Fixes\n- \ud83d\udc1b Update changelog processing in release workflow (d0c193b)\n",
-    "changelog": "### \ud83d\udc1b Bug Fixes\n- \ud83d\udc1b Update changelog processing in release workflow (d0c193b)\n"
+    "release_notes": "### \u267b\ufe0f Code Refactoring\n- \u267b\ufe0f streamline setup.py and remove unused modules (56c4e59)\n",
+    "changelog": "### \u267b\ufe0f Code Refactoring\n- \u267b\ufe0f streamline setup.py and remove unused modules (56c4e59)\n"
 }
