@@ -6,8 +6,21 @@ import webbrowser
 from typing import Callable
 import os
 from PIL import Image, ImageTk
+import json
 
 from src.gui.utils.gui_utils import center_window
+
+def get_version() -> str:
+    """Get current version from version.json."""
+    try:
+        version_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 
+                                  'version.json')
+        with open(version_file, 'r') as f:
+            version_data = json.load(f)
+            return f"{version_data['major']}.{version_data['minor']}.{version_data['patch']}"
+    except Exception as e:
+        print(f"Error reading version: {e}")
+        return "Unknown"
 
 class LoginDialog:
     """Dialog for Spotify authentication."""
@@ -193,7 +206,7 @@ class AboutDialog:
         # Version
         version_label = ttk.Label(
             main_frame,
-            text="Version 2.0.14",  # From version.json
+            text=f"Version {get_version()}",
             font=('Helvetica', 12),
         )
         version_label.pack(pady=(0, 20))
