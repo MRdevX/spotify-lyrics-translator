@@ -95,7 +95,14 @@ jobs:
       - name: Create DMG (macOS)
         if: matrix.os == 'macos-latest'
         run: |
+          # Prepare icon directory
+          mkdir -p .tmp_icon
+          cp assets/app_icon.icns .tmp_icon/.VolumeIcon.icns
+
+          # Set permissions
           chmod -R 755 "dist/Spotify Lyrics Translator.app"
+
+          # Create DMG
           create-dmg \
             --volname "Spotify Lyrics Translator" \
             --volicon ".tmp_icon/.VolumeIcon.icns" \

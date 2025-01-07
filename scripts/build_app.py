@@ -172,12 +172,12 @@ def build_windows_app():
 block_cipher = None
 
 a = Analysis(
-    [os.path.join('{project_root}', 'src', 'main.py')],
-    pathex=['{project_root}'],
+    [os.path.join(r'{project_root}', 'src', 'main.py')],
+    pathex=[r'{project_root}'],
     binaries=[],
     datas=[
-        (os.path.join('{project_root}', 'src', 'config'), 'src/config'),
-        (os.path.join('{project_root}', 'assets'), 'assets'),
+        (os.path.join(r'{project_root}', 'src', 'config'), 'src/config'),
+        (os.path.join(r'{project_root}', 'assets'), 'assets'),
     ],
     hiddenimports=[
         'tkinter',
@@ -188,6 +188,10 @@ a = Analysis(
         'syrics',
         'sv_ttk',
         'spotipy',
+        'json',
+        'threading',
+        'webbrowser',
+        'pkg_resources',
     ],
     hookspath=[],
     hooksconfig={{}},
@@ -217,7 +221,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=os.path.join('{project_root}', 'assets', 'app_icon.ico'),
+    icon=os.path.join(r'{project_root}', 'assets', 'app_icon.ico'),
 )
 
 coll = COLLECT(
@@ -233,27 +237,74 @@ coll = COLLECT(
 '''
         
         # Write spec file
-        with open('spotify_translator.spec', 'w') as f:
+        spec_path = os.path.join(project_root, 'spotify_translator.spec')
+        with open(spec_path, 'w', encoding='utf-8') as f:
             f.write(spec_content)
         
-        # Build using PyInstaller
-        subprocess.run([
+        print("Created PyInstaller spec file")
+        
+        # Clean PyInstaller cache
+        for cache_dir in ['build', 'dist', '__pycache__']:
+            cache_path = os.path.join(project_root, cache_dir)
+            if os.path.exists(cache_path):
+                shutil.rmtree(cache_path)
+        
+        print("Cleaned PyInstaller cache")
+        
+        # Build using PyInstaller with detailed output
+        build_cmd = [
             sys.executable,
             '-m',
             'PyInstaller',
             '--clean',
             '--noconfirm',
-            'spotify_translator.spec'
-        ], check=True)
+            '--log-level=DEBUG',
+            spec_path
+        ]
+        
+        print(f"Running PyInstaller command: {' '.join(build_cmd)}")
+        
+        process = subprocess.run(
+            build_cmd,
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        
+        # Print PyInstaller output
+        if process.stdout:
+            print("\nPyInstaller Output:")
+            print(process.stdout)
+        
+        if process.stderr:
+            print("\nPyInstaller Errors:")
+            print(process.stderr)
+        
+        # Verify the build
+        dist_path = os.path.join(project_root, 'dist', 'Spotify Lyrics Translator')
+        if not os.path.exists(dist_path):
+            raise FileNotFoundError(f"Build directory not found at {dist_path}")
+        
+        exe_path = os.path.join(dist_path, 'Spotify Lyrics Translator.exe')
+        if not os.path.exists(exe_path):
+            raise FileNotFoundError(f"Executable not found at {exe_path}")
         
         print("\nBuild completed successfully!")
-        print(f"Executable created at: {os.path.abspath('dist/Spotify Lyrics Translator')}")
+        print(f"Executable created at: {os.path.abspath(exe_path)}")
         
     except subprocess.CalledProcessError as e:
-        print(f"Error during build: {e}")
+        print(f"\nError during PyInstaller build:")
+        print(f"Command: {e.cmd}")
+        print(f"Return code: {e.returncode}")
+        if e.stdout:
+            print("\nOutput:")
+            print(e.stdout)
+        if e.stderr:
+            print("\nErrors:")
+            print(e.stderr)
         raise
     except Exception as e:
-        print(f"Unexpected error during build: {e}")
+        print(f"\nUnexpected error during build: {e}")
         raise
 
 def verify_environment():
