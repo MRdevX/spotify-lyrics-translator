@@ -224,8 +224,6 @@ coll = COLLECT(
         build_cmd = [
             'pyinstaller',
             '--clean',
-            '--windowed',
-            '--noconfirm',
             '--log-level=DEBUG',
             'SpotifyTranslator.spec'
         ]

@@ -112,6 +112,13 @@ jobs:
           attempt=1
           while [ $attempt -le $max_attempts ]; do
             echo "Attempt $attempt to create DMG..."
+            
+            # Clean up any existing DMG
+            rm -f "dist/Spotify Lyrics Translator.dmg"
+            
+            # Wait for any system processes to release handles
+            sleep 5
+            
             if create-dmg \
               --volname "Spotify Lyrics Translator" \
               --volicon ".tmp_icon/.VolumeIcon.icns" \
@@ -122,28 +129,31 @@ jobs:
               --hide-extension "Spotify Lyrics Translator.app" \
               --app-drop-link 600 200 \
               --no-internet-enable \
+              --skip-jenkins \
               "dist/Spotify Lyrics Translator.dmg" \
               "dist/Spotify Lyrics Translator.app"; then
               echo "DMG created successfully!"
-              break
+              
+              # Verify the DMG
+              if [ -f "dist/Spotify Lyrics Translator.dmg" ]; then
+                dmg_size=$(ls -lh "dist/Spotify Lyrics Translator.dmg" | awk '{print $5}')
+                echo "DMG created successfully with size: $dmg_size"
+                break
+              else
+                echo "DMG file not found after creation"
+              fi
             else
               echo "DMG creation failed on attempt $attempt"
               if [ $attempt -eq $max_attempts ]; then
                 echo "All attempts to create DMG failed"
                 exit 1
               fi
-              sleep 5
             fi
             ((attempt++))
           done
 
-          # Verify DMG
-          if [ -f "dist/Spotify Lyrics Translator.dmg" ]; then
-            echo "DMG file exists and has size: $(ls -lh "dist/Spotify Lyrics Translator.dmg")"
-          else
-            echo "Error: DMG file was not created"
-            exit 1
-          fi
+          # Clean up temporary files
+          rm -rf .tmp_icon
 
       - name: Package App (macOS)
         if: matrix.os == 'macos-latest'
