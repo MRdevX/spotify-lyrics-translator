@@ -164,6 +164,47 @@ def generate_changelog(commits: List[Dict[str, str]]) -> str:
     
     return '\n'.join(changelog)
 
+def update_changelog(version: str, changelog: str, date: str) -> None:
+    """Update CHANGELOG.md with new version information."""
+    changelog_path = os.path.join(get_project_root(), 'CHANGELOG.md')
+    
+    try:
+        # Read existing changelog
+        if os.path.exists(changelog_path):
+            with open(changelog_path, 'r', encoding='utf-8') as f:
+                existing_content = f.read()
+        else:
+            existing_content = """# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+"""
+        
+        # Find the position after the header
+        header_end = existing_content.find("\n## ")
+        if header_end == -1:
+            header_end = len(existing_content)
+        
+        # Insert new version entry after the header
+        new_entry = f"\n## [{version}] - {date}\n\n{changelog}\n"
+        updated_content = (
+            existing_content[:header_end] +
+            new_entry +
+            existing_content[header_end:]
+        )
+        
+        # Write updated changelog
+        with open(changelog_path, 'w', encoding='utf-8') as f:
+            f.write(updated_content)
+            
+        print(f"Updated CHANGELOG.md with version {version}")
+        
+    except Exception as e:
+        print(f"Error updating CHANGELOG.md: {e}")
+        raise
+
 def update_version(version_type: str, notes: Optional[str] = None) -> None:
     """Update version numbers based on type (major, minor, patch)"""
     version_data = load_version()
@@ -186,18 +227,26 @@ def update_version(version_type: str, notes: Optional[str] = None) -> None:
     commits = get_commit_history()
     changelog = generate_changelog(commits)
     
+    # Get current date
+    release_date = datetime.now().strftime('%Y-%m-%d')
+    version = f"{major}.{minor}.{patch}"
+    
+    # Update version.json
     version_data.update({
         'major': major,
         'minor': minor,
         'patch': patch,
         'build': version_data.get('build', 0) + 1,
-        'release_date': datetime.now().strftime('%Y-%m-%d'),
+        'release_date': release_date,
         'release_notes': notes or changelog or 'No release notes provided',
         'changelog': changelog
     })
     
+    # Update CHANGELOG.md
+    update_changelog(version, changelog, release_date)
+    
     save_version(version_data)
-    print(f"\nVersion updated to v{major}.{minor}.{patch}")
+    print(f"\nVersion updated to v{version}")
     if changelog:
         print("\nChangelog:")
         print(changelog)
@@ -327,7 +376,7 @@ def main():
     # Commit version update
     try:
         version = f"v{version_data['major']}.{version_data['minor']}.{version_data['patch']}"
-        subprocess.run(['git', 'add', 'version.json'], check=True)
+        subprocess.run(['git', 'add', 'version.json', 'CHANGELOG.md'], check=True)
         subprocess.run(['git', 'commit', '-m', f"chore: prepare release {version}"], check=True)
         subprocess.run(['git', 'push'], check=True)
         
