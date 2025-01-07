@@ -35,7 +35,7 @@ OPTIONS = {
         'CFBundleIdentifier': 'com.mrdevx.spotifylyricsapp',
         'CFBundleVersion': '1.0.0',
         'CFBundleShortVersionString': '1.0.0',
-        'NSHumanReadableCopyright': '© 2024 MrDevX',
+        'NSHumanReadableCopyright': '© 2025 MrDevX',
         'LSMinimumSystemVersion': '10.13.0',
         'NSHighResolutionCapable': True,
         'LSApplicationCategoryType': 'public.app-category.music',

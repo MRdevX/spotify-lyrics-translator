@@ -4,6 +4,8 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import webbrowser
 from typing import Callable
+import os
+from PIL import Image, ImageTk
 
 from src.gui.utils.gui_utils import center_window
 
@@ -137,16 +139,16 @@ class AboutDialog:
     def __init__(self, parent: tk.Tk):
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("About Spotify Lyrics Translator")
-        self.dialog.geometry("600x500")
+        self.dialog.geometry("600x650")
         self.dialog.configure(bg='#282828')
         self.dialog.transient(parent)
         self.dialog.grab_set()
-
+        
         # Make dialog resizable
         self.dialog.resizable(True, True)
         
         # Center the dialog
-        center_window(self.dialog, 600, 500)
+        center_window(self.dialog, 600, 650)
         self._init_components()
 
     def _init_components(self) -> None:
@@ -154,25 +156,51 @@ class AboutDialog:
         main_frame = ttk.Frame(self.dialog, padding="20")
         main_frame.pack(fill=tk.BOTH, expand=True)
 
+        # App Logo
+        try:
+            # Get the absolute path to the icon file
+            icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 
+                                   'assets', 'app_icon.png')
+            
+            # Load and resize the image
+            image = Image.open(icon_path)
+            image = image.resize((128, 128), Image.Resampling.LANCZOS)
+            photo = ImageTk.PhotoImage(image)
+            
+            # Create label with image
+            logo_label = ttk.Label(main_frame, image=photo)
+            logo_label.image = photo  # Keep a reference to prevent garbage collection
+            logo_label.pack(pady=(0, 10))
+        except Exception as e:
+            print(f"Error loading app icon: {e}")
+            # Fallback to text if image loading fails
+            logo_label = ttk.Label(
+                main_frame,
+                text="🎵",
+                font=('Helvetica', 48)
+            )
+            logo_label.pack(pady=(0, 10))
+
         # App title
         title_label = ttk.Label(
             main_frame,
             text="Spotify Lyrics Translator",
-            font=('Helvetica', 16, 'bold'),
+            font=('Helvetica', 20, 'bold'),
             wraplength=500
         )
-        title_label.pack(pady=(0, 10))
+        title_label.pack(pady=(0, 5))
 
         # Version
         version_label = ttk.Label(
             main_frame,
-            text="Version 1.0.0",
-            font=('Helvetica', 10),
+            text="Version 2.0.14",  # From version.json
+            font=('Helvetica', 12),
         )
         version_label.pack(pady=(0, 20))
 
         self._add_description(main_frame)
         self._add_author_info(main_frame)
+        self._add_social_links(main_frame)
         self._add_credits(main_frame)
         self._add_close_button(main_frame)
 
@@ -180,7 +208,7 @@ class AboutDialog:
         """Add application description."""
         desc_label = ttk.Label(
             container,
-            text="A desktop application that shows real-time translations of Spotify lyrics while you listen to music.",
+            text="A powerful desktop application that provides real-time translations of Spotify lyrics while you listen to music. Experience your favorite songs in any language with synchronized translations.",
             font=('Helvetica', 11),
             wraplength=500,
             justify=tk.CENTER
@@ -192,32 +220,43 @@ class AboutDialog:
         author_frame = ttk.Frame(container)
         author_frame.pack(fill=tk.X, pady=10)
 
-        author_label = ttk.Label(
+        # Developer info
+        dev_label = ttk.Label(
             author_frame,
-            text="Author: Mahdi Rashidi",
-            font=('Helvetica', 11),
+            text="Developed by",
+            font=('Helvetica', 11)
         )
-        author_label.pack()
+        dev_label.pack()
 
-        email_label = ttk.Label(
+        name_label = ttk.Label(
             author_frame,
-            text="Email: m8rashidi@gmail.com",
-            font=('Helvetica', 11),
-            cursor="hand2",
-            foreground="#1DB954"
+            text="Mahdi Rashidi",
+            font=('Helvetica', 12, 'bold')
         )
-        email_label.pack()
-        email_label.bind("<Button-1>", lambda e: webbrowser.open("mailto:m8rashidi@gmail.com"))
+        name_label.pack()
 
-        repo_label = ttk.Label(
-            author_frame,
-            text="GitHub Repository",
-            font=('Helvetica', 11),
-            cursor="hand2",
-            foreground="#1DB954"
-        )
-        repo_label.pack()
-        repo_label.bind("<Button-1>", lambda e: webbrowser.open("https://github.com/MRdevX/spotify-translator"))
+    def _add_social_links(self, container: ttk.Frame) -> None:
+        """Add social and contact links."""
+        links_frame = ttk.Frame(container)
+        links_frame.pack(fill=tk.X, pady=10)
+
+        links = [
+            ("🌐 Website", "https://notablenomads.com"),
+            ("💼 LinkedIn", "https://www.linkedin.com/in/mrdevx/"),
+            ("📧 Email", "mailto:m8rashidi@gmail.com"),
+            ("🐙 GitHub", "https://github.com/MRdevX/spotify-lyrics-translator")
+        ]
+
+        for icon, url in links:
+            link_label = ttk.Label(
+                links_frame,
+                text=icon,
+                font=('Helvetica', 11),
+                cursor="hand2",
+                foreground="#1DB954"
+            )
+            link_label.pack(pady=2)
+            link_label.bind("<Button-1>", lambda e, url=url: webbrowser.open(url))
 
     def _add_credits(self, container: ttk.Frame) -> None:
         """Add credits information."""
@@ -226,21 +265,28 @@ class AboutDialog:
 
         credits_label = ttk.Label(
             credits_frame,
-            text="Credits",
+            text="Built with",
             font=('Helvetica', 12, 'bold'),
         )
-        credits_label.pack()
+        credits_label.pack(pady=(0, 5))
 
-        original_repo_label = ttk.Label(
-            credits_frame,
-            text="Original Project by @atahanuz",
-            font=('Helvetica', 11),
-            cursor="hand2",
-            foreground="#1DB954"
-        )
-        original_repo_label.pack()
-        original_repo_label.bind("<Button-1>", 
-                               lambda e: webbrowser.open("https://github.com/atahanuz/spotify-translator"))
+        technologies = [
+            ("Spotify API", "https://developer.spotify.com"),
+            ("Syrics", "https://github.com/akashrchandran/syrics"),
+            ("Deep Translator", "https://github.com/nidhaloff/deep-translator"),
+            ("Sun Valley TTK Theme", "https://github.com/rdbende/Sun-Valley-ttk-theme")
+        ]
+
+        for tech, url in technologies:
+            tech_label = ttk.Label(
+                credits_frame,
+                text=tech,
+                font=('Helvetica', 11),
+                cursor="hand2",
+                foreground="#1DB954"
+            )
+            tech_label.pack(pady=2)
+            tech_label.bind("<Button-1>", lambda e, url=url: webbrowser.open(url))
 
     def _add_close_button(self, container: ttk.Frame) -> None:
         """Add close button."""
@@ -250,4 +296,13 @@ class AboutDialog:
             command=self.dialog.destroy,
             style='Accent.TButton'
         )
-        close_button.pack(pady=20) 
+        close_button.pack(pady=20)
+
+        # Copyright notice
+        copyright_label = ttk.Label(
+            container,
+            text="© 2025 Mahdi Rashidi. All rights reserved.",
+            font=('Helvetica', 9),
+            foreground="#808080"
+        )
+        copyright_label.pack(pady=(0, 10)) 
