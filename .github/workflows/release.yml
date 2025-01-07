@@ -146,7 +146,8 @@ jobs:
           changelog = version_data.get('changelog', 'No changes recorded')
           # Escape newlines for GitHub Actions
           changelog = changelog.replace('\n', '%0A')
-          print(f"::set-output name=changelog::{changelog}")
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
+              print(f"changelog={changelog}", file=fh)
 
       - name: Create Release (macOS)
         if: matrix.os == 'macos-latest'

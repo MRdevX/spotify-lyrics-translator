@@ -7,19 +7,41 @@ from typing import Callable
 import os
 from PIL import Image, ImageTk
 import json
+import sys
 
 from src.gui.utils.gui_utils import center_window
+from src.config.app_config import AppConfig
 
 def get_version() -> str:
     """Get current version from version.json."""
     try:
-        version_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 
-                                  'version.json')
+        # Get the project root directory
+        current_dir = os.path.dirname(os.path.abspath(__file__))  # dialogs.py directory
+        project_root = os.path.abspath(os.path.join(current_dir, '..', '..', '..'))
+        version_file = os.path.join(project_root, 'version.json')
+        
+        # For frozen app (when bundled)
+        if getattr(sys, 'frozen', False):
+            if sys.platform == 'darwin':
+                # For macOS app bundle
+                version_file = os.path.join(os.path.dirname(sys.executable), '..', 'Resources', 'version.json')
+            else:
+                # For Windows executable
+                version_file = os.path.join(os.path.dirname(sys.executable), 'version.json')
+        
+        print(f"Looking for version.json at: {version_file}")
+        
+        if not os.path.exists(version_file):
+            print(f"Error: version.json not found at {version_file}")
+            return "Unknown"
+        
         with open(version_file, 'r') as f:
             version_data = json.load(f)
-            return f"{version_data['major']}.{version_data['minor']}.{version_data['patch']}"
+            version = f"{version_data['major']}.{version_data['minor']}.{version_data['patch']}"
+            print(f"Successfully read version: {version}")
+            return version
     except Exception as e:
-        print(f"Error reading version: {e}")
+        print(f"Error reading version from version.json: {str(e)}")
         return "Unknown"
 
 class LoginDialog:

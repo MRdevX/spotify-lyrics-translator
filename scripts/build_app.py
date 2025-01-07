@@ -108,102 +108,67 @@ def verify_files():
         raise FileNotFoundError("Required files are missing")
 
 def build_macos_app():
-    """Build the macOS app using py2app"""
-    print("Building macOS application bundle...")
+    """Build macOS app using py2app."""
     try:
-        verify_files()
+        # Clean previous builds
+        clean_build()
         
-        # Build command for production app
+        # Copy version.json to src directory
+        shutil.copy('version.json', 'src/version.json')
+        
+        # Build command
         build_cmd = [
             sys.executable,
             'scripts/setup.py',
-            'py2app',
-            '--packages=tkinter,deep_translator,syrics,sv_ttk,spotipy,PIL'
+            'py2app'
         ]
         
-        print(f"Running build command: {' '.join(build_cmd)}")
+        print("Running build command:", ' '.join(build_cmd))
+        
+        # Run build
         subprocess.run(build_cmd, check=True)
         
-        # Verify the app bundle
-        app_path = os.path.join('dist', 'Spotify Lyrics Translator.app')
-        if not os.path.exists(app_path):
-            raise FileNotFoundError(f"App bundle not found at {app_path}")
-        
-        print("\nVerifying app bundle contents:")
-        critical_paths = [
-            'Contents/MacOS/Spotify Lyrics Translator',
-            'Contents/Resources/lib/python*/site-packages',
-            'Contents/Resources/src/main.py',
-            'Contents/Resources/src/config/config.json',
-            'Contents/Frameworks/Python.framework/Versions/Current/Python'
-        ]
-        
-        for path in critical_paths:
-            full_path = os.path.join(app_path, path)
-            matches = glob.glob(full_path)
-            if not matches:
-                print(f"✗ Warning: {path} not found in app bundle")
-            else:
-                print(f"✓ Found {path}")
-        
-        # Fix permissions
-        subprocess.run(['chmod', '-R', '755', app_path], check=True)
-        
         print("\nBuild completed successfully!")
-        print(f"App bundle created at: {os.path.abspath(app_path)}")
+        print("App bundle created at: dist/Spotify Lyrics Translator.app")
         
     except subprocess.CalledProcessError as e:
-        print(f"Error during build: {e}")
-        raise
-    except Exception as e:
-        print(f"Unexpected error during build: {e}")
-        raise
+        print(f"Error building app: {e}")
+        sys.exit(1)
+    finally:
+        # Clean up copied version.json
+        if os.path.exists('src/version.json'):
+            os.remove('src/version.json')
 
 def build_windows_app():
-    """Build the Windows app using PyInstaller"""
-    print("Building Windows executable...")
+    """Build Windows executable using PyInstaller."""
     try:
-        verify_files()
-        project_root = get_project_root()
+        # Clean previous builds
+        clean_build()
         
-        # Create spec file content
+        # Prepare spec file content
         spec_content = f'''# -*- mode: python ; coding: utf-8 -*-
 
-block_cipher = None
-
 a = Analysis(
-    [os.path.join(r'{project_root}', 'src', 'main.py')],
-    pathex=[r'{project_root}'],
+    ['src/main.py'],
+    pathex=[],
     binaries=[],
     datas=[
-        (os.path.join(r'{project_root}', 'src', 'config'), 'src/config'),
-        (os.path.join(r'{project_root}', 'assets'), 'assets'),
+        ('assets/app_icon.ico', 'assets'),
+        ('version.json', '.'),
+        ('src/config/config.json', 'src/config')
     ],
-    hiddenimports=[
-        'tkinter',
-        'tkinter.ttk',
-        'PIL',
-        'PIL._tkinter_finder',
-        'deep_translator',
-        'syrics',
-        'sv_ttk',
-        'spotipy',
-        'json',
-        'threading',
-        'webbrowser',
-        'pkg_resources',
-    ],
+    hiddenimports=['PIL._tkinter_finder'],
     hookspath=[],
     hooksconfig={{}},
     runtime_hooks=[],
     excludes=[],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
-    cipher=block_cipher,
+    cipher=None,
     noarchive=False,
 )
 
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+pyz = PYZ(a.pure, a.zipped_data, cipher=None)
 
 exe = EXE(
     pyz,
@@ -221,7 +186,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=os.path.join(r'{project_root}', 'assets', 'app_icon.ico'),
+    icon='assets/app_icon.ico'
 )
 
 coll = COLLECT(
@@ -232,80 +197,32 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='Spotify Lyrics Translator',
+    name='Spotify Lyrics Translator'
 )
 '''
         
         # Write spec file
-        spec_path = os.path.join(project_root, 'spotify_translator.spec')
-        with open(spec_path, 'w', encoding='utf-8') as f:
+        with open('SpotifyTranslator.spec', 'w') as f:
             f.write(spec_content)
         
-        print("Created PyInstaller spec file")
-        
-        # Clean PyInstaller cache
-        for cache_dir in ['build', 'dist', '__pycache__']:
-            cache_path = os.path.join(project_root, cache_dir)
-            if os.path.exists(cache_path):
-                shutil.rmtree(cache_path)
-        
-        print("Cleaned PyInstaller cache")
-        
-        # Build using PyInstaller with detailed output
+        # Build command
         build_cmd = [
-            sys.executable,
-            '-m',
-            'PyInstaller',
+            'pyinstaller',
             '--clean',
+            '--windowed',
             '--noconfirm',
-            '--log-level=DEBUG',
-            spec_path
+            'SpotifyTranslator.spec'
         ]
         
-        print(f"Running PyInstaller command: {' '.join(build_cmd)}")
-        
-        process = subprocess.run(
-            build_cmd,
-            check=True,
-            capture_output=True,
-            text=True
-        )
-        
-        # Print PyInstaller output
-        if process.stdout:
-            print("\nPyInstaller Output:")
-            print(process.stdout)
-        
-        if process.stderr:
-            print("\nPyInstaller Errors:")
-            print(process.stderr)
-        
-        # Verify the build
-        dist_path = os.path.join(project_root, 'dist', 'Spotify Lyrics Translator')
-        if not os.path.exists(dist_path):
-            raise FileNotFoundError(f"Build directory not found at {dist_path}")
-        
-        exe_path = os.path.join(dist_path, 'Spotify Lyrics Translator.exe')
-        if not os.path.exists(exe_path):
-            raise FileNotFoundError(f"Executable not found at {exe_path}")
+        # Run build
+        subprocess.run(build_cmd, check=True)
         
         print("\nBuild completed successfully!")
-        print(f"Executable created at: {os.path.abspath(exe_path)}")
+        print("Executable created at: dist/Spotify Lyrics Translator")
         
     except subprocess.CalledProcessError as e:
-        print(f"\nError during PyInstaller build:")
-        print(f"Command: {e.cmd}")
-        print(f"Return code: {e.returncode}")
-        if e.stdout:
-            print("\nOutput:")
-            print(e.stdout)
-        if e.stderr:
-            print("\nErrors:")
-            print(e.stderr)
-        raise
-    except Exception as e:
-        print(f"\nUnexpected error during build: {e}")
-        raise
+        print(f"Error building app: {e}")
+        sys.exit(1)
 
 def verify_environment():
     """Verify the build environment"""

@@ -4,6 +4,7 @@ Setup script for building the macOS app using py2app
 import os
 import sys
 import platform
+import json
 from setuptools import setup
 
 # Add the project root to Python path
@@ -23,7 +24,8 @@ else:
 APP = [os.path.join(project_root, 'src/main.py')]
 DATA_FILES = [
     ('src/config', [os.path.join(project_root, 'src/config/config.json')]),
-    ('assets', [os.path.join(project_root, 'assets/app_icon.icns')])
+    ('assets', [os.path.join(project_root, 'assets/app_icon.icns')]),
+    ('', [os.path.join(project_root, 'version.json')])
 ]
 
 OPTIONS = {
@@ -104,15 +106,47 @@ OPTIONS = {
 }
 
 def main():
+    """Main setup function."""
     # Change to project root directory
     os.chdir(project_root)
     
+    # Read version from version.json
+    try:
+        with open('version.json', 'r') as f:
+            version_data = json.load(f)
+            version = f"{version_data['major']}.{version_data['minor']}.{version_data['patch']}"
+    except Exception as e:
+        print(f"Warning: Could not read version from version.json: {e}")
+        version = "1.0.0"
+    
+    # Update plist version
+    OPTIONS['plist'].update({
+        'CFBundleVersion': version,
+        'CFBundleShortVersionString': version,
+    })
+    
     setup(
         name='Spotify Lyrics Translator',
+        version=version,
         app=APP,
         data_files=DATA_FILES,
         options={'py2app': OPTIONS},
-        setup_requires=['py2app'],
+        setup_requires=['py2app>=0.28.6'],
+        install_requires=[
+            'deep_translator',
+            'syrics',
+            'sv_ttk',
+            'spotipy',
+            'Pillow',
+            'requests',
+            'urllib3',
+            'certifi',
+            'charset_normalizer',
+            'idna',
+            'tqdm',
+            'redis',
+            'beautifulsoup4'
+        ],
     )
 
 if __name__ == '__main__':
