@@ -1,9 +1,9 @@
 {
     "major": 2,
     "minor": 0,
-    "patch": 17,
-    "build": 20,
+    "patch": 18,
+    "build": 21,
     "release_date": "2025-01-07",
-    "release_notes": "### \u2728 New Features\n- \u2728 Add CHANGELOG.md and update version management (0139067)\n- \u2728 Implement font management and dynamic font resizing (abcb5b3)\n",
-    "changelog": "### \u2728 New Features\n- \u2728 Add CHANGELOG.md and update version management (0139067)\n- \u2728 Implement font management and dynamic font resizing (abcb5b3)\n"
+    "release_notes": "### \u2728 New Features\n- \u2728 Enhance release workflow to include changelog in release notes (c8d3637)\n",
+    "changelog": "### \u2728 New Features\n- \u2728 Enhance release workflow to include changelog in release notes (c8d3637)\n"
 }
