@@ -9,7 +9,7 @@ import sys
 import argparse
 from datetime import datetime
 import subprocess
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional, List
 
 def get_project_root() -> str:
     """Get the project root directory"""
@@ -47,6 +47,123 @@ def get_current_version() -> Tuple[int, int, int]:
         version_data['patch']
     )
 
+def get_commit_history(since_tag: Optional[str] = None) -> List[Dict[str, str]]:
+    """Get commit history with conventional commit parsing."""
+    try:
+        # Get the last tag if not provided
+        if not since_tag:
+            result = subprocess.run(['git', 'describe', '--tags', '--abbrev=0'],
+                                 capture_output=True, text=True)
+            if result.returncode == 0:
+                since_tag = result.stdout.strip()
+            else:
+                # If no tags exist, get all commits
+                since_tag = ''
+
+        # Get commits since the last tag
+        cmd = ['git', 'log', '--pretty=format:%s|%h|%an|%ad', '--date=short']
+        if since_tag:
+            cmd.append(f'{since_tag}..HEAD')
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        commits = []
+        
+        for line in result.stdout.split('\n'):
+            if not line:
+                continue
+            
+            message, hash_id, author, date = line.split('|')
+            
+            # Parse conventional commit format
+            commit_type = 'other'
+            scope = None
+            description = message
+            
+            if ':' in message:
+                type_part, desc_part = message.split(':', 1)
+                if '(' in type_part and ')' in type_part:
+                    commit_type, scope = type_part.split('(', 1)
+                    scope = scope.rstrip(')')
+                else:
+                    commit_type = type_part
+                description = desc_part.strip()
+                
+            commits.append({
+                'type': commit_type.lower(),
+                'scope': scope,
+                'description': description,
+                'hash': hash_id,
+                'author': author,
+                'date': date
+            })
+        
+        return commits
+    
+    except subprocess.CalledProcessError as e:
+        print(f"Error getting commit history: {e}")
+        return []
+
+def generate_changelog(commits: List[Dict[str, str]]) -> str:
+    """Generate a formatted changelog from commits."""
+    type_emojis = {
+        'feat': '✨',
+        'fix': '🐛',
+        'docs': '📚',
+        'style': '💎',
+        'refactor': '♻️',
+        'perf': '🚀',
+        'test': '🧪',
+        'build': '🛠️',
+        'ci': '⚙️',
+        'chore': '🔧',
+        'revert': '⏪'
+    }
+    
+    sections = {
+        'feat': '### ✨ New Features',
+        'fix': '### 🐛 Bug Fixes',
+        'docs': '### 📚 Documentation',
+        'style': '### 💎 Styles',
+        'refactor': '### ♻️ Code Refactoring',
+        'perf': '### 🚀 Performance Improvements',
+        'test': '### 🧪 Tests',
+        'build': '### 🛠️ Build System',
+        'ci': '### ⚙️ CI/CD',
+        'chore': '### 🔧 Chores',
+        'revert': '### ⏪ Reverts'
+    }
+    
+    changes = {}
+    for commit in commits:
+        commit_type = commit['type']
+        if commit_type not in changes:
+            changes[commit_type] = []
+        
+        # Format the commit line
+        emoji = type_emojis.get(commit_type, '🔹')
+        scope = f"({commit['scope']}) " if commit['scope'] else ""
+        description = commit['description']
+        hash_id = commit['hash']
+        
+        commit_line = f"- {emoji} {scope}{description} ({hash_id})"
+        changes[commit_type].append(commit_line)
+    
+    # Build the changelog
+    changelog = []
+    for commit_type, section_title in sections.items():
+        if commit_type in changes and changes[commit_type]:
+            changelog.append(section_title)
+            changelog.extend(changes[commit_type])
+            changelog.append('')  # Empty line between sections
+    
+    # Add other changes if any
+    other_changes = changes.get('other', [])
+    if other_changes:
+        changelog.append('### 🔹 Other Changes')
+        changelog.extend(other_changes)
+    
+    return '\n'.join(changelog)
+
 def update_version(version_type: str, notes: Optional[str] = None) -> None:
     """Update version numbers based on type (major, minor, patch)"""
     version_data = load_version()
@@ -65,17 +182,25 @@ def update_version(version_type: str, notes: Optional[str] = None) -> None:
         print(f"Invalid version type: {version_type}")
         sys.exit(1)
     
+    # Generate changelog from commits
+    commits = get_commit_history()
+    changelog = generate_changelog(commits)
+    
     version_data.update({
         'major': major,
         'minor': minor,
         'patch': patch,
         'build': version_data.get('build', 0) + 1,
         'release_date': datetime.now().strftime('%Y-%m-%d'),
-        'release_notes': notes or 'No release notes provided'
+        'release_notes': notes or changelog or 'No release notes provided',
+        'changelog': changelog
     })
     
     save_version(version_data)
     print(f"\nVersion updated to v{major}.{minor}.{patch}")
+    if changelog:
+        print("\nChangelog:")
+        print(changelog)
     return version_data
 
 def verify_git_status() -> bool:
@@ -106,8 +231,51 @@ def create_release(version_data: Dict) -> None:
     version = f"v{version_data['major']}.{version_data['minor']}.{version_data['patch']}"
     
     try:
+        # Create release body with changelog
+        release_body = f"""# Spotify Lyrics Translator {version}
+
+## What's Changed
+
+{version_data.get('changelog', 'No changes recorded')}
+
+## Installation
+
+### macOS
+
+#### Option 1: DMG Installer (Recommended)
+1. Download `Spotify Lyrics Translator.dmg`
+2. Open the DMG file
+3. Drag the app to your Applications folder
+4. Launch from Applications or Spotlight
+
+#### Option 2: Direct App
+1. Download `Spotify Lyrics Translator-macOS.zip`
+2. Extract the archive
+3. Move to Applications folder
+4. Launch the app
+
+### Windows
+
+1. Download `Spotify Lyrics Translator-Windows.zip`
+2. Extract the archive
+3. Run `Spotify Lyrics Translator.exe`
+
+## System Requirements
+
+### macOS
+- macOS 10.13 or later
+- Apple Silicon or Intel Mac
+- Spotify Premium account
+- Active internet connection
+
+### Windows
+- Windows 10 or later (64-bit)
+- Spotify Premium account
+- Active internet connection
+"""
+        
         # Create and push tag
-        tag_message = f"Release {version}\n\n{version_data['release_notes']}"
+        tag_message = f"Release {version}\n\n{version_data.get('changelog', 'No changes recorded')}"
         subprocess.run(['git', 'tag', '-a', version, '-m', tag_message], check=True)
         subprocess.run(['git', 'push', 'origin', version], check=True)
         
@@ -142,6 +310,11 @@ def main():
     
     if args.dry_run:
         print("\nDry run - no changes will be made")
+        commits = get_commit_history()
+        changelog = generate_changelog(commits)
+        if changelog:
+            print("\nChangelog preview:")
+            print(changelog)
         return
     
     # Verify git status
