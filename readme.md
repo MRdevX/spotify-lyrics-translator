@@ -4,41 +4,50 @@
 ![GitHub all releases](https://img.shields.io/github/downloads/mrdevx/spotify-translator/total)
 ![GitHub](https://img.shields.io/github/license/mrdevx/spotify-translator)
 ![macOS](https://img.shields.io/badge/macOS-10.13%2B-blue)
+![Windows](https://img.shields.io/badge/Windows-10%2B-blue)
 
 <p align="center">
-  <img src="assets/app_icon.icns" alt="Spotify Lyrics Translator Logo" width="200">
+  <img src="assets/app_icon.png" alt="Spotify Lyrics Translator Logo" width="200">
 </p>
 
-> 🌍 Real-time translation of Spotify lyrics in a beautiful, native macOS app
-
-This project is a fork of [spotify-translator](https://github.com/atahanuz/spotify-translator) by [@atahanuz](https://github.com/atahanuz), enhanced with native macOS integration and additional features. Special thanks to Atahan Uz (atahanuz23@gmail.com) for creating the original project that made this possible!
+> 🌍 A powerful desktop application that provides real-time translation of Spotify lyrics while you listen to music. Experience your favorite songs in any language with synchronized translations, beautiful interface, and seamless integration with Spotify.
 
 ## ✨ Features
 
 - 🔄 Real-time lyrics synchronization with Spotify
 - 🌐 Support for multiple translation languages
-- 🎨 Modern and native macOS interface
+- 🎨 Modern and native interface for both macOS and Windows
 - 🌙 Light/Dark mode support
 - ⚡️ Fast and efficient performance
 - 🔒 Secure authentication with Spotify
+- 💾 Smart caching system for faster translations
+- 🖥️ Cross-platform support (macOS & Windows)
 
 ## 🚀 Quick Start
 
 ### Installation
 
-#### Option 1: DMG Installer (Recommended)
+#### macOS
+
+##### Option 1: DMG Installer (Recommended)
 
 1. Download the latest `Spotify Lyrics Translator.dmg` from [Releases](https://github.com/mrdevx/spotify-translator/releases)
 2. Open the DMG file
 3. Drag the app to your Applications folder
 4. Launch from Applications or Spotlight
 
-#### Option 2: ZIP Archive
+##### Option 2: ZIP Archive
 
-1. Download the latest `Spotify Lyrics Translator.zip`
+1. Download the latest `Spotify Lyrics Translator-macOS.zip`
 2. Extract the archive
 3. Move the app to Applications folder
 4. Launch the app
+
+#### Windows
+
+1. Download the latest `Spotify Lyrics Translator-Windows.zip`
+2. Extract the archive
+3. Run `Spotify Lyrics Translator.exe`
 
 ### First Run Setup
 
@@ -65,18 +74,27 @@ Powered by advanced translation APIs, supporting:
 
 ### Native Experience
 
-- Seamless macOS integration
+- Seamless system integration
 - System notifications
 - Native window management
 - Keyboard shortcuts
 
 ## ⚙️ Requirements
 
+### macOS
+
 - macOS 10.13 or later
+- Apple Silicon or Intel Mac
 - Spotify Premium account
 - Active internet connection
 - 50MB free disk space
-- Python 3.8 or later (for development)
+
+### Windows
+
+- Windows 10 or later
+- Spotify Premium account
+- Active internet connection
+- 50MB free disk space
 
 ## 🛠️ Development
 
@@ -87,7 +105,7 @@ spotify-translator/
 ├── .github/                # GitHub configuration
 │   └── workflows/         # GitHub Actions workflows
 ├── assets/                # Application assets
-│   └── app_icon.icns     # App icon
+│   └── app_icon.png      # App icon
 ├── scripts/              # Build and utility scripts
 │   ├── build_app.py     # Main build script
 │   ├── build_dmg.py     # DMG creation orchestrator
@@ -112,7 +130,8 @@ cd spotify-translator
 
 # Create virtual environment
 python -m venv venv
-source venv/bin/activate
+source venv/bin/activate  # On macOS/Linux
+venv\Scripts\activate     # On Windows
 
 # Install dependencies
 pip install -r requirements.txt
@@ -125,7 +144,7 @@ The project includes several build scripts in the `scripts` directory:
 #### Development Build
 
 ```bash
-# Create development build (alias mode)
+# Create development build
 python scripts/build_app.py
 ```
 
@@ -134,8 +153,9 @@ This creates a development build that links to your source files, making it easi
 #### Production Build
 
 ```bash
-# Create production build and DMG installer
-python scripts/build_dmg.py
+# Create production build and installer
+python scripts/build_dmg.py  # For macOS
+python scripts/build_app.py  # For Windows
 ```
 
 This script:
@@ -144,26 +164,7 @@ This script:
 2. Verifies the environment
 3. Installs requirements
 4. Creates a standalone app bundle
-5. Packages the app into a DMG installer
-
-#### Build Scripts
-
-- `build_app.py`: Creates the macOS application bundle using py2app
-
-  - Verifies development environment
-  - Manages dependencies
-  - Handles both Intel and Apple Silicon builds
-  - Validates the app bundle structure
-
-- `build_dmg.py`: Orchestrates the complete build process
-
-  - Coordinates between build_app.py and create_dmg.py
-  - Ensures all steps complete successfully
-
-- `create_dmg.py`: Creates the DMG installer
-  - Packages the app for distribution
-  - Creates a professional installer with custom background
-  - Includes Applications folder shortcut
+5. Packages the app into an installer
 
 ### Release Process
 
@@ -183,41 +184,6 @@ python scripts/version_manager.py patch --notes "Fixed bug in lyrics display"
 # Test what would happen (dry run):
 python scripts/version_manager.py patch --dry-run
 ```
-
-The version manager will:
-
-1. Verify the git repository is clean
-2. Update version.json with new version numbers
-3. Commit the version update
-4. Create and push a git tag
-5. Trigger the GitHub Actions workflow
-
-The GitHub Actions workflow will then:
-
-- Build the app using py2app
-- Create a DMG installer
-- Create a GitHub release with:
-  - The app bundle
-  - The DMG installer
-  - Installation instructions
-  - Release notes from version.json
-
-#### Version Manager Features
-
-- Semantic versioning (major.minor.patch)
-- Automatic build number increment
-- Release notes management
-- Git status verification
-- Dry run mode for testing
-- Automated git tag creation
-- GitHub Actions integration
-
-#### Release Requirements
-
-- Push access to the repository
-- Clean git working directory
-- Valid version.json file
-- All tests passing
 
 ## 🤝 Contributing
 
@@ -247,7 +213,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- [@atahanuz](https://github.com/atahanuz) for the original [spotify-translator](https://github.com/atahanuz/spotify-translator) project
+- [spotify-translator](https://github.com/atahanuz/spotify-translator) by [@atahanuz](https://github.com/atahanuz)
 - [Spotify](https://spotify.com) for their amazing platform
 - [Syrics](https://github.com/akashrchandran/syrics) for lyrics fetching
 - [Deep Translator](https://github.com/nidhaloff/deep-translator) for translations
