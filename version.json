@@ -1,9 +1,9 @@
 {
     "major": 2,
     "minor": 0,
-    "patch": 18,
-    "build": 21,
+    "patch": 19,
+    "build": 22,
     "release_date": "2025-01-07",
-    "release_notes": "### \u2728 New Features\n- \u2728 Enhance release workflow to include changelog in release notes (c8d3637)\n",
-    "changelog": "### \u2728 New Features\n- \u2728 Enhance release workflow to include changelog in release notes (c8d3637)\n"
+    "release_notes": "### \u2728 New Features\n- \u2728 Refactor build scripts and enhance version management (f7a0952)\n- \u2728 Implement dynamic version retrieval in AboutDialog (084cade)\n",
+    "changelog": "### \u2728 New Features\n- \u2728 Refactor build scripts and enhance version management (f7a0952)\n- \u2728 Implement dynamic version retrieval in AboutDialog (084cade)\n"
 }

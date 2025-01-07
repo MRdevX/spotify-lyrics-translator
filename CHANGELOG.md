@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.19] - 2025-01-07
+
+### ✨ New Features
+- ✨ Refactor build scripts and enhance version management (f7a0952)
+- ✨ Implement dynamic version retrieval in AboutDialog (084cade)
+
+
 ## [2.0.18] - 2025-01-07
 
 ### ✨ New Features
